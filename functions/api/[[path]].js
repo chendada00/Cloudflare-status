@@ -1,140 +1,72 @@
+const API="https://api.cloudflare.com/client/v4";
+const GQL=API+"/graphql";
+const DAY=86400000;
 
-const CF = "https://api.cloudflare.com/client/v4";
-const GQL = "https://api.cloudflare.com/client/v4/graphql";
+const ok=(data)=>new Response(JSON.stringify({success:true,...data}),{headers:{"content-type":"application/json;charset=utf-8","cache-control":"no-store"}});
+const fail=(error,status=500,details=null)=>new Response(JSON.stringify({success:false,error,details}),{status,headers:{"content-type":"application/json;charset=utf-8","cache-control":"no-store"}});
+function cfg(env){if(!env.CLOUDFLARE_API_TOKEN||!env.CLOUDFLARE_ACCOUNT_ID)throw Error("缺少 CLOUDFLARE_API_TOKEN 或 CLOUDFLARE_ACCOUNT_ID 环境变量");return {token:env.CLOUDFLARE_API_TOKEN,account:env.CLOUDFLARE_ACCOUNT_ID};}
+async function rest(path,token,init={}){const r=await fetch(API+path,{...init,headers:{authorization:`Bearer ${token}`,...init.headers}});const d=await r.json();if(!r.ok||d.success===false)throw Error(d.errors?.map(x=>x.message).join("；")||`Cloudflare API ${r.status}`);return d.result;}
+async function gql(query,variables,token){const r=await fetch(GQL,{method:"POST",headers:{authorization:`Bearer ${token}`,"content-type":"application/json"},body:JSON.stringify({query,variables})});const d=await r.json();if(!r.ok||d.errors)throw Error(d.errors?.map(x=>x.message).join("；")||`GraphQL ${r.status}`);return d.data;}
+function range(url){const days=Math.min(30,Math.max(1,Number(url.searchParams.get("days")||7)));const end=new Date(),start=new Date(end.getTime()-days*DAY);return {days,start,end,startISO:start.toISOString(),endISO:end.toISOString(),since:start.toISOString().slice(0,10),until:end.toISOString().slice(0,10)}}
+const sum=(a)=>a.reduce((s,x)=>s+(Number(x)||0),0);
+const dateRows=(rows,getDate,getValue)=>{const m={};for(const x of rows||[]){const k=(getDate(x)||"").slice(0,10);if(k)m[k]=(m[k]||0)+Number(getValue(x)||0)}return Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0])).map(([date,value])=>({date,value}));}
+async function inventory(env){const {token,account}=cfg(env);const calls=[
+ ["zones",rest("/zones?per_page=100",token)],["workers",rest(`/accounts/${account}/workers/scripts?per_page=100`,token)],
+ ["d1",rest(`/accounts/${account}/d1/database?per_page=100`,token)],["kv",rest(`/accounts/${account}/storage/kv/namespaces?per_page=100`,token)],
+ ["r2",rest(`/accounts/${account}/r2/buckets?per_page=100`,token)],["do",rest(`/accounts/${account}/workers/durable_objects/namespaces?per_page=100`,token)],
+ ["queues",rest(`/accounts/${account}/queues?per_page=100`,token)]
+];const settled=await Promise.allSettled(calls.map(x=>x[1]));const data={},warnings=[];
+settled.forEach((x,i)=>{const n=calls[i][0];if(x.status==="fulfilled")data[n]=x.value;else{data[n]=null;warnings.push({name:n,error:x.reason.message})}});
+return {counts:{zones:data.zones?.length||0,workers:data.workers?.length||0,d1:data.d1?.length||0,kv:data.kv?.length||0,r2:data.r2?.buckets?.length||0,durableObjects:data.do?.length||0,queues:data.queues?.length||0},
+resources:{zones:(data.zones||[]).map(x=>({id:x.id,name:x.name,status:x.status,plan:x.plan?.name||""})),workers:(data.workers||[]).map(x=>({id:x.id,modified_on:x.modified_on})),d1:(data.d1||[]).map(x=>({uuid:x.uuid,name:x.name,created_at:x.created_at})),kv:(data.kv||[]).map(x=>({id:x.id,title:x.title})),r2:(data.r2?.buckets||[]).map(x=>({name:x.name,creation_date:x.creation_date})),durableObjects:(data.do||[]).map(x=>({id:x.id,name:x.name,script:x.script})),queues:(data.queues||[]).map(x=>({id:x.queue_id,name:x.queue_name}))},warnings};}
 
-function json(data, status=200, headers={}) {
-  return new Response(JSON.stringify(data), {status, headers:{"content-type":"application/json;charset=UTF-8","cache-control":"no-store",...headers}});
-}
-function err(message,status=500,extra={}) { return json({success:false,error:message,...extra},status); }
-function envConfig(env){
-  const token=env.CLOUDFLARE_API_TOKEN;
-  const accountId=env.CLOUDFLARE_ACCOUNT_ID;
-  if(!token||!accountId) throw new Error("缺少 CLOUDFLARE_API_TOKEN 或 CLOUDFLARE_ACCOUNT_ID");
-  return {token,accountId};
-}
-async function cf(path, token, init={}) {
-  const r=await fetch(CF+path,{...init,headers:{authorization:`Bearer ${token}`,...(init.headers||{})}});
-  const d=await r.json();
-  if(!r.ok||d.success===false) throw new Error(d.errors?.map(x=>x.message).join("; ")||`Cloudflare API ${r.status}`);
-  return d.result;
-}
-async function gql(query, variables, token) {
-  const r=await fetch(GQL,{method:"POST",headers:{authorization:`Bearer ${token}`,"content-type":"application/json"},body:JSON.stringify({query,variables})});
-  const d=await r.json();
-  if(!r.ok||d.errors) throw new Error(d.errors?.map(x=>x.message).join("; ")||`GraphQL ${r.status}`);
-  return d.data;
-}
-const sum=a=>a.reduce((s,x)=>s+(Number(x)||0),0);
-const gb=n=>Number(n||0)/1024/1024/1024;
-
-async function safe(name, fn, warnings){
-  try{return [name,await fn()]}catch(e){warnings.push({name,error:String(e.message||e)});return [name,null]}
-}
-
-async function inventory(env){
-  const {token,accountId}=envConfig(env);
-  const warnings=[];
-  const entries=await Promise.all([
-    safe("zones",()=>cf(`/zones?per_page=100`,token),warnings),
-    safe("workers",()=>cf(`/accounts/${accountId}/workers/scripts?per_page=100`,token),warnings),
-    safe("d1",()=>cf(`/accounts/${accountId}/d1/database?per_page=100`,token),warnings),
-    safe("kv",()=>cf(`/accounts/${accountId}/storage/kv/namespaces?per_page=100`,token),warnings),
-    safe("r2",()=>cf(`/accounts/${accountId}/r2/buckets?per_page=100`,token),warnings),
-    safe("do",()=>cf(`/accounts/${accountId}/workers/durable_objects/namespaces?per_page=100`,token),warnings),
-  ]);
-  const x=Object.fromEntries(entries);
-  return {counts:{
-    zones:x.zones?.length||0,workers:x.workers?.length||0,d1:x.d1?.length||0,
-    kv:x.kv?.length||0,r2:x.r2?.buckets?.length||0, durableObjects:x.do?.length||0
-  }, resources:{
-    zones:(x.zones||[]).map(z=>({id:z.id,name:z.name,status:z.status,plan:z.plan?.name||""})),
-    workers:(x.workers||[]).map(w=>({id:w.id,created_on:w.created_on,modified_on:w.modified_on})),
-    d1:(x.d1||[]).map(d=>({uuid:d.uuid,name:d.name,created_at:d.created_at,version:d.version})),
-    kv:(x.kv||[]).map(k=>({id:k.id,title:k.title})),
-    r2:(x.r2?.buckets||[]).map(b=>({name:b.name,creation_date:b.creation_date})),
-    durableObjects:(x.do||[]).map(d=>({id:d.id,name:d.name,script:d.script}))
-  },warnings};
+async function zoneAnalytics(env,url){const {token}=cfg(env);const zone=url.searchParams.get("zone");if(!zone)throw Error("请选择 Zone");const r=range(url);
+const q=`query($zoneTag:String!,$since:Date!,$until:Date!){viewer{zones(filter:{zoneTag:$zoneTag}){httpRequests1dGroups(limit:100,filter:{date_geq:$since,date_leq:$until}){dimensions{date}sum{requests bytes cachedBytes threats pageViews}uniq{uniques}}httpRequestsAdaptiveGroups(limit:50,orderBy:[sum_requests_DESC],filter:{datetime_geq:$sinceT,datetime_leq:$untilT}){dimensions{clientCountryName edgeResponseStatus}count}}}}`;
+try{
+ const d=await gql(q,{zoneTag:zone,since:r.since,until:r.until,sinceT:r.startISO,untilT:r.endISO},token);
+ const groups=d.viewer.zones[0]?.httpRequests1dGroups||[];
+ const status={};for(const x of d.viewer.zones[0]?.httpRequestsAdaptiveGroups||[]){const k=String(x.dimensions?.edgeResponseStatus||"未知");status[k]=(status[k]||0)+(x.count||0)}
+ const totals={requests:sum(groups.map(x=>x.sum?.requests)),bytes:sum(groups.map(x=>x.sum?.bytes)),cachedBytes:sum(groups.map(x=>x.sum?.cachedBytes)),threats:sum(groups.map(x=>x.sum?.threats)),pageViews:sum(groups.map(x=>x.sum?.pageViews)),uniques:sum(groups.map(x=>x.uniq?.uniques))};
+ return {range:r,totals,trend:groups.map(x=>({date:x.dimensions.date,requests:x.sum?.requests||0,bytes:x.sum?.bytes||0,cachedBytes:x.sum?.cachedBytes||0,threats:x.sum?.threats||0,pageViews:x.sum?.pageViews||0,uniques:x.uniq?.uniques||0})),status};
+}catch(e){throw Error("Zone Analytics 查询失败："+e.message)}
 }
 
-const ACCOUNT_QUERY = `
-query($accountTag:String!,$start:DateTime!,$end:DateTime!){
-  viewer {
-    accounts(filter:{accountTag:$accountTag}) {
-      workersInvocationsAdaptive(limit:5000,filter:{datetime_geq:$start,datetime_leq:$end}) {
-        sum { requests errors subrequests cpuTime }
-        dimensions { datetime }
-      }
-      d1AnalyticsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_leq:$end}) {
-        sum { readQueries writeQueries rowsRead rowsWritten queryBatchResponseBytes queryBatchTimeMs databaseSizeBytes }
-        dimensions { datetime databaseId }
-      }
-      kvOperationsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_leq:$end}) {
-        sum { requests }
-        dimensions { datetime action namespaceId }
-      }
-      kvStorageAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_leq:$end}) {
-        max { bytes }
-        dimensions { datetime namespaceId }
-      }
-    }
-  }
-}`;
-const ZONE_QUERY = `
-query($zoneTag:String!,$start:DateTime!,$end:DateTime!){
- viewer { zones(filter:{zoneTag:$zoneTag}) {
-   httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_leq:$end}) {
-     sum { requests bytes cachedBytes threats }
-     dimensions { datetime }
-   }
- }}
-}`;
-
-async function analytics(env, url){
-  const {token,accountId}=envConfig(env);
-  const days=Math.min(Math.max(Number(url.searchParams.get("days")||7),1),31);
-  const zoneId=url.searchParams.get("zone")||"";
-  const end=new Date(); const start=new Date(end.getTime()-days*86400000);
-  const vars={accountTag:accountId,start:start.toISOString(),end:end.toISOString()};
-  const warnings=[];
-  let account=null, zone=null;
-  try{account=await gql(ACCOUNT_QUERY,vars,token)}catch(e){warnings.push({name:"账号级 GraphQL 指标",error:e.message})}
-  if(zoneId){
-    try{zone=await gql(ZONE_QUERY,{zoneTag:zoneId,start:vars.start,end:vars.end},token)}catch(e){warnings.push({name:"Zone GraphQL 指标",error:e.message})}
-  }
-  const a=account?.viewer?.accounts?.[0]||{};
-  const workers=a.workersInvocationsAdaptive||[];
-  const d1=a.d1AnalyticsAdaptiveGroups||[];
-  const kvOps=a.kvOperationsAdaptiveGroups||[];
-  const kvStorage=a.kvStorageAdaptiveGroups||[];
-  const z=zone?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups||[];
-  const byDay=(rows, field, section="sum")=>{
-    const m={}; for(const r of rows){const k=(r.dimensions?.datetime||"").slice(0,10); if(!k)continue; m[k]=(m[k]||0)+Number(r[section]?.[field]||0)}
-    return Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0])).map(([date,value])=>({date,value}));
-  };
-  const kvActions={}; for(const r of kvOps){const k=r.dimensions?.action||"OTHER";kvActions[k]=(kvActions[k]||0)+Number(r.sum?.requests||0)}
-  const latestStorage={}; for(const r of kvStorage){const k=r.dimensions?.namespaceId||"unknown";latestStorage[k]=Math.max(latestStorage[k]||0,Number(r.max?.bytes||0))}
-  const d1Totals={readQueries:sum(d1.map(x=>x.sum?.readQueries)),writeQueries:sum(d1.map(x=>x.sum?.writeQueries)),rowsRead:sum(d1.map(x=>x.sum?.rowsRead)),rowsWritten:sum(d1.map(x=>x.sum?.rowsWritten)),responseBytes:sum(d1.map(x=>x.sum?.queryBatchResponseBytes)),latencyMs:sum(d1.map(x=>x.sum?.queryBatchTimeMs)),storageBytes:Math.max(0,...d1.map(x=>Number(x.sum?.databaseSizeBytes||0)))};
-  const workerTotals={requests:sum(workers.map(x=>x.sum?.requests)),errors:sum(workers.map(x=>x.sum?.errors)),subrequests:sum(workers.map(x=>x.sum?.subrequests)),cpuTime:sum(workers.map(x=>x.sum?.cpuTime))};
-  const zoneTotals={requests:sum(z.map(x=>x.sum?.requests)),bytes:sum(z.map(x=>x.sum?.bytes)),cachedBytes:sum(z.map(x=>x.sum?.cachedBytes)),threats:sum(z.map(x=>x.sum?.threats))};
-  return {days,range:{start:vars.start,end:vars.end},warnings,workers:{totals:workerTotals,trend:byDay(workers,"requests"),errors:byDay(workers,"errors")},d1:{totals:d1Totals,rowsRead:byDay(d1,"rowsRead"),rowsWritten:byDay(d1,"rowsWritten"),readQueries:byDay(d1,"readQueries"),writeQueries:byDay(d1,"writeQueries")},kv:{actions:kvActions,storageBytes:sum(Object.values(latestStorage)),namespaces:Object.keys(latestStorage).length},zone:{id:zoneId,totals:zoneTotals,trend:byDay(z,"requests"),bytes:byDay(z,"bytes")}};
+async function zoneSecurity(env,url){const {token}=cfg(env);const zone=url.searchParams.get("zone");if(!zone)throw Error("请选择 Zone");const r=range(url);
+const q=`query($zoneTag:String!,$since:Date!,$until:Date!){viewer{zones(filter:{zoneTag:$zoneTag}){firewallEventsAdaptiveGroups(limit:20,orderBy:[count_DESC],filter:{datetime_geq:$start,datetime_leq:$end}){count dimensions{action clientCountryName}}}}}`;
+try{const d=await gql(q,{zoneTag:zone,since:r.since,until:r.until,start:r.startISO,end:r.endISO},token);const rows=d.viewer.zones[0]?.firewallEventsAdaptiveGroups||[];return {range:r,total:sum(rows.map(x=>x.count)),actions:rows.reduce((m,x)=>(m[x.dimensions?.action||"unknown]=(m[x.dimensions?.action||"unknown"]||0)+x.count,m),{}),countries:rows.reduce((m,x)=>(m[x.dimensions?.clientCountryName||"unknown"]=(m[x.dimensions?.clientCountryName||"unknown"]||0)+x.count,m),{})};}catch(e){throw Error("安全事件查询失败："+e.message)}
 }
 
-async function billable(env){
-  const {token,accountId}=envConfig(env);
-  const r=await fetch(`${CF}/accounts/${accountId}/billable/usage`,{headers:{authorization:`Bearer ${token}`}});
-  const d=await r.json();
-  if(!r.ok||d.success===false) throw new Error(d.errors?.map(x=>x.message).join("; ")||"Billable Usage API 不可用");
-  return d.result||[];
-}
+async function workersAnalytics(env,url){const {token,account}=cfg(env);const r=range(url);
+const q=`query($accountTag:String!,$start:DateTime!,$end:DateTime!){viewer{accounts(filter:{accountTag:$accountTag}){workersInvocationsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_leq:$end}){dimensions{datetime scriptName}sum{requests errors subrequests cpuTime}}}}}`;
+const d=await gql(q,{accountTag:account,start:r.startISO,end:r.endISO},token);const rows=d.viewer.accounts[0]?.workersInvocationsAdaptiveGroups||[];
+const totals={requests:sum(rows.map(x=>x.sum?.requests)),errors:sum(rows.map(x=>x.sum?.errors)),subrequests:sum(rows.map(x=>x.sum?.subrequests)),cpuTime:sum(rows.map(x=>x.sum?.cpuTime))};
+const scripts={};for(const x of rows){const n=x.dimensions?.scriptName||"unknown";scripts[n]||(scripts[n]={name:n,requests:0,errors:0,cpuTime:0,subrequests:0});for(const k of ["requests","errors","cpuTime","subrequests"])scripts[n][k]+=Number(x.sum?.[k]||0)}
+return {range:r,totals,trend:{requests:dateRows(rows,x=>x.dimensions?.datetime,x=>x.sum?.requests),errors:dateRows(rows,x=>x.dimensions?.datetime,x=>x.sum?.errors),cpuTime:dateRows(rows,x=>x.dimensions?.datetime,x=>x.sum?.cpuTime)},scripts:Object.values(scripts).sort((a,b)=>b.requests-a.requests)};}
 
-export async function onRequest({request,env}){
-  const url=new URL(request.url);
-  const p=url.pathname.replace(/^\/api\/?/,"");
-  try{
-    if(p==="config") return json({success:true,siteName:env.SITE_NAME||"Cloudflare Status",siteIcon:env.SITE_ICON||"/favicon.svg"});
-    if(p==="inventory") return json({success:true,...await inventory(env)});
-    if(p==="analytics") return json({success:true,...await analytics(env,url)});
-    if(p==="billable") return json({success:true,result:await billable(env)});
-    return err("API 不存在",404);
-  }catch(e){return err(e.message||"服务器错误",500);}
-}
+async function d1Analytics(env,url){const {token,account}=cfg(env);const r=range(url);
+const q=`query($accountTag:String!,$start:DateTime!,$end:DateTime!){viewer{accounts(filter:{accountTag:$accountTag}){d1AnalyticsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_leq:$end}){dimensions{datetime databaseId}sum{readQueries writeQueries rowsRead rowsWritten queryBatchResponseBytes queryBatchTimeMs databaseSizeBytes}}}}}`;
+const d=await gql(q,{accountTag:account,start:r.startISO,end:r.endISO},token);const rows=d.viewer.accounts[0]?.d1AnalyticsAdaptiveGroups||[];
+const fields=["readQueries","writeQueries","rowsRead","rowsWritten","queryBatchResponseBytes","queryBatchTimeMs"];const totals=Object.fromEntries(fields.map(k=>[k,sum(rows.map(x=>x.sum?.[k]))]));totals.databaseSizeBytes=Math.max(0,...rows.map(x=>Number(x.sum?.databaseSizeBytes||0)));
+const db={};for(const x of rows){const n=x.dimensions?.databaseId||"unknown";db[n]||(db[n]={id:n});for(const k of fields)db[n][k]=(db[n][k]||0)+Number(x.sum?.[k]||0);db[n].databaseSizeBytes=Math.max(db[n].databaseSizeBytes||0,Number(x.sum?.databaseSizeBytes||0))}
+return {range:r,totals,trend:{rowsRead:dateRows(rows,x=>x.dimensions?.datetime,x=>x.sum?.rowsRead),rowsWritten:dateRows(rows,x=>x.dimensions?.datetime,x=>x.sum?.rowsWritten),readQueries:dateRows(rows,x=>x.dimensions?.datetime,x=>x.sum?.readQueries),writeQueries:dateRows(rows,x=>x.dimensions?.datetime,x=>x.sum?.writeQueries)},databases:Object.values(db).sort((a,b)=>b.rowsRead-a.rowsRead)};}
+
+async function kvAnalytics(env,url){const {token,account}=cfg(env);const r=range(url);
+const q=`query($accountTag:String!,$start:DateTime!,$end:DateTime!){viewer{accounts(filter:{accountTag:$accountTag}){kvOperationsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_leq:$end}){dimensions{datetime action namespaceId}sum{requests}}kvStorageAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_leq:$end}){dimensions{datetime namespaceId}max{bytes}}}}}`;
+const d=await gql(q,{accountTag:account,start:r.startISO,end:r.endISO},token);const a=d.viewer.accounts[0]||{},ops=a.kvOperationsAdaptiveGroups||[],storage=a.kvStorageAdaptiveGroups||[];
+const actions={},names={};for(const x of ops){const ac=x.dimensions?.action||"OTHER";actions[ac]=(actions[ac]||0)+Number(x.sum?.requests||0);const id=x.dimensions?.namespaceId||"unknown";names[id]=(names[id]||0)+Number(x.sum?.requests||0)}
+const latest={};for(const x of storage){const id=x.dimensions?.namespaceId||"unknown";latest[id]=Math.max(latest[id]||0,Number(x.max?.bytes||0))}
+return {range:r,totalRequests:sum(Object.values(actions)),actions,storageBytes:sum(Object.values(latest)),trend:dateRows(ops,x=>x.dimensions?.datetime,x=>x.sum?.requests),namespaces:Object.entries(names).map(([id,requests])=>({id,requests,storageBytes:latest[id]||0})).sort((a,b)=>b.requests-a.requests)};}
+
+async function usage(env){const {token,account}=cfg(env);try{return {result:await rest(`/accounts/${account}/billable-usage`,token)}}catch(e){try{return {result:await rest(`/accounts/${account}/billing/usage`,token)}}catch(e2){throw Error("Billable Usage 当前账户/API 不可用："+e2.message)}}}
+
+export async function onRequest({request,env}){const url=new URL(request.url);const p=url.pathname.replace(/^\/api\/?/,"");try{
+ if(p==="config")return ok({siteName:env.SITE_NAME||"Cloudflare Status"});
+ if(p==="inventory")return ok(await inventory(env));
+ if(p==="zone")return ok(await zoneAnalytics(env,url));
+ if(p==="security")return ok(await zoneSecurity(env,url));
+ if(p==="workers")return ok(await workersAnalytics(env,url));
+ if(p==="d1")return ok(await d1Analytics(env,url));
+ if(p==="kv")return ok(await kvAnalytics(env,url));
+ if(p==="usage")return ok(await usage(env));
+ return fail("API 不存在",404);
+}catch(e){return fail(e.message||"服务器错误",500);}}
