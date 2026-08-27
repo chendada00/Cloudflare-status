@@ -1,0 +1,64 @@
+<!doctype html><html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cloudflare Status</title><link rel="icon" href="/favicon.svg">
+<script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+body{background:radial-gradient(circle at 8% 0%,#dbeafe,transparent 28%),radial-gradient(circle at 92% 8%,#ede9fe,transparent 30%),#f8fafc;color:#0f172a}
+.card{background:rgba(255,255,255,.88);border:1px solid #e2e8f0;border-radius:1.25rem;box-shadow:0 18px 50px -40px #334155}
+.metric{background:linear-gradient(180deg,#fff,#f8fafc);border:1px solid #e2e8f0;border-radius:1rem;padding:1.15rem;transition:.2s}
+.metric:hover{transform:translateY(-2px);box-shadow:0 22px 48px -38px #0f172a}
+.section-title{border-left:5px solid #2563eb;padding-left:.8rem}.chart{height:320px}
+[data-theme=dark] body{background:#0b1120;color:#e5e7eb}[data-theme=dark] .card,[data-theme=dark] .metric{background:#111827;border-color:#263244}[data-theme=dark] .text-slate-500{color:#94a3b8}
+</style></head><body class="min-h-screen"><main class="max-w-7xl mx-auto p-4 md:p-7">
+<header class="card p-5 md:p-7 mb-5"><div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div><div class="inline-flex px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700">Cloudflare Account Analytics</div><h1 id="title" class="text-3xl font-black mt-3">Cloudflare Status</h1><p class="text-slate-500 mt-2">账号资源、流量、Workers、D1、KV 与可计费用量统一监控</p></div>
+<div class="flex gap-2 items-center"><select id="zone" class="border rounded-xl px-3 py-2 bg-white max-w-xs"></select><div class="flex gap-1" id="ranges"></div><button id="refresh" class="rounded-xl bg-slate-900 text-white px-4 py-2 font-bold">刷新</button><button id="theme" class="rounded-xl border px-3 py-2">☾</button></div></div></header>
+<div id="error" class="hidden mb-5 p-4 rounded-xl bg-red-50 text-red-700"></div>
+<section class="mb-5"><h2 class="section-title text-lg font-black mb-3">资源总览</h2><div id="inventory" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3"></div></section>
+<section class="mb-5"><h2 class="section-title text-lg font-black mb-3">核心指标</h2><div id="metrics" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div></section>
+<section class="grid lg:grid-cols-2 gap-5 mb-5"><div class="card p-4"><h3 class="font-bold">Workers 请求趋势</h3><div id="workersChart" class="chart"></div></div><div class="card p-4"><h3 class="font-bold">D1 Rows Read / Written</h3><div id="d1Chart" class="chart"></div></div><div class="card p-4"><h3 class="font-bold">站点 HTTP 请求</h3><div id="zoneChart" class="chart"></div></div><div class="card p-4"><h3 class="font-bold">KV 操作分布</h3><div id="kvChart" class="chart"></div></div></section>
+<section class="card p-5 mb-5"><h2 class="section-title text-lg font-black mb-4">资源清单</h2><div id="resources" class="grid md:grid-cols-2 xl:grid-cols-3 gap-3 text-sm"></div></section>
+<section id="billableWrap" class="card p-5 mb-5"><h2 class="section-title text-lg font-black mb-3">Billable Usage</h2><p class="text-slate-500 text-sm mb-3">Cloudflare 账户可计量用量接口。若 API Token/账号没有权限或该 Alpha 接口未对账户开放，会自动显示不可用。</p><div id="billable" class="overflow-auto text-sm"></div></section>
+<section id="warnings" class="hidden card p-5"><h2 class="section-title text-lg font-black mb-3">部分指标未获取</h2><div id="warningList" class="space-y-2 text-sm text-amber-700"></div></section>
+<footer class="text-center text-xs text-slate-400 py-8">Cloudflare Status · API Token 仅保存在 Pages 服务端环境变量中</footer>
+</main><script>
+let days=7, inv=null, charts={}; const $=s=>document.querySelector(s);
+const ranges=[1,7,30]; $('#ranges').innerHTML=ranges.map(d=>`<button data-d="${d}" class="range px-3 py-2 rounded-xl border text-sm ${d===7?'bg-slate-900 text-white':''}">${d}天</button>`).join('');
+document.addEventListener('click',e=>{if(e.target.classList.contains('range')){days=+e.target.dataset.d;document.querySelectorAll('.range').forEach(x=>x.className='range px-3 py-2 rounded-xl border text-sm '+(+x.dataset.d===days?'bg-slate-900 text-white':''));loadAnalytics()}});
+$('#theme').onclick=()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';Object.values(charts).forEach(c=>c.resize())};
+$('#refresh').onclick=()=>loadAll(); $('#zone').onchange=()=>loadAnalytics();
+const fmt=n=>new Intl.NumberFormat('zh-CN',{maximumFractionDigits:2}).format(Number(n||0));
+const bytes=n=>{n=Number(n||0);for(const u of ['B','KB','MB','GB','TB']){if(n<1024)return fmt(n)+' '+u;n/=1024}return fmt(n)+' PB'};
+function metric(title,value,sub=''){return `<div class="metric"><div class="text-slate-500 text-xs">${title}</div><div class="text-2xl font-black mt-2">${value}</div><div class="text-slate-400 text-xs mt-2">${sub}</div></div>`}
+async function get(path){const r=await fetch(path);const d=await r.json();if(!r.ok||!d.success)throw Error(d.error||'请求失败');return d}
+async function loadInventory(){const d=await get('/api/inventory');inv=d;$('#inventory').innerHTML=[
+['Zone',d.counts.zones],['Workers',d.counts.workers],['D1',d.counts.d1],['KV Namespace',d.counts.kv],['R2 Bucket',d.counts.r2],['Durable Objects',d.counts.durableObjects]
+].map(x=>metric(x[0],fmt(x[1]),'已发现资源')).join('');
+$('#zone').innerHTML='<option value="">全部账号 / 不看 Zone</option>'+d.resources.zones.map(z=>`<option value="${z.id}">${z.name} · ${z.status}</option>`).join('');
+const groups=[['Workers',d.resources.workers.map(x=>x.id)],['D1',d.resources.d1.map(x=>x.name)],['KV',d.resources.kv.map(x=>x.title)],['R2',d.resources.r2.map(x=>x.name)],['Durable Objects',d.resources.durableObjects.map(x=>x.name)],['Zones',d.resources.zones.map(x=>x.name)]];
+$('#resources').innerHTML=groups.map(([n,a])=>`<div class="metric"><b>${n}</b><div class="mt-2 text-slate-500 break-all">${a.length?a.slice(0,20).join(' · '):'未发现或无权限'}${a.length>20?' …':''}</div></div>`).join('');
+return d.warnings||[]}
+function chart(id,opt){charts[id]?.dispose();charts[id]=echarts.init(document.getElementById(id));charts[id].setOption(opt)}
+function line(id,rows,name){chart(id,{tooltip:{trigger:'axis'},xAxis:{type:'category',data:rows.map(x=>x.date)},yAxis:{type:'value'},series:[{name,type:'line',smooth:true,data:rows.map(x=>x.value),areaStyle:{}}]})}
+async function loadAnalytics(){const zone=$('#zone').value;const d=await get(`/api/analytics?days=${days}&zone=${encodeURIComponent(zone)}`);
+$('#metrics').innerHTML=[
+metric('Workers 请求',fmt(d.workers.totals.requests),`错误 ${fmt(d.workers.totals.errors)} · CPU ${fmt(d.workers.totals.cpuTime)} ms`),
+metric('D1 Rows Read',fmt(d.d1.totals.rowsRead),`Rows Written ${fmt(d.d1.totals.rowsWritten)}`),
+metric('D1 存储',bytes(d.d1.totals.storageBytes),`读查询 ${fmt(d.d1.totals.readQueries)} · 写查询 ${fmt(d.d1.totals.writeQueries)}`),
+metric('KV 存储',bytes(d.kv.storageBytes),`有指标的 Namespace ${fmt(d.kv.namespaces)}`),
+metric('Zone 请求',fmt(d.zone.totals.requests),`流量 ${bytes(d.zone.totals.bytes)} · 缓存 ${bytes(d.zone.totals.cachedBytes)}`),
+metric('Zone Threats',fmt(d.zone.totals.threats),'所选 Zone 统计'),
+metric('Workers 错误率',d.workers.totals.requests?((d.workers.totals.errors/d.workers.totals.requests)*100).toFixed(3)+'%':'0%','按 GraphQL 聚合'),
+metric('D1 响应数据',bytes(d.d1.totals.responseBytes),`累计服务端查询时间 ${fmt(d.d1.totals.latencyMs)} ms`)
+].join('');
+line('workersChart',d.workers.trend,'Requests');
+chart('d1Chart',{tooltip:{trigger:'axis'},legend:{data:['Rows Read','Rows Written']},xAxis:{type:'category',data:d.d1.rowsRead.map(x=>x.date)},yAxis:{type:'value'},series:[{name:'Rows Read',type:'line',smooth:true,data:d.d1.rowsRead.map(x=>x.value)},{name:'Rows Written',type:'line',smooth:true,data:d.d1.rowsWritten.map(x=>x.value)}]});
+line('zoneChart',d.zone.trend,'HTTP Requests');
+chart('kvChart',{tooltip:{trigger:'item'},series:[{type:'pie',radius:['40%','70%'],data:Object.entries(d.kv.actions).map(([name,value])=>({name,value}))}]});
+return d.warnings||[]}
+async function loadBillable(){try{const d=await get('/api/billable');$('#billable').innerHTML=`<table class="min-w-full"><thead><tr class="text-left border-b"><th class="p-2">产品</th><th class="p-2">描述</th><th class="p-2">用量</th><th class="p-2">单位</th><th class="p-2">日期</th></tr></thead><tbody>${d.result.slice(-100).reverse().map(x=>`<tr class="border-b"><td class="p-2">${x.x_ProductFamilyName||x.ServiceFamilyName||x.ServiceName||'-'}</td><td class="p-2">${x.ChargeDescription||'-'}</td><td class="p-2 font-bold">${fmt(x.ConsumedQuantity)}</td><td class="p-2">${x.ConsumedUnit||''}</td><td class="p-2">${String(x.ChargePeriodStart||'').slice(0,10)}</td></tr>`).join('')}</tbody></table>`}catch(e){$('#billable').textContent='当前账户无法读取 Billable Usage：'+e.message}}
+function showWarnings(a){if(!a.length){$('#warnings').classList.add('hidden');return}$('#warnings').classList.remove('hidden');$('#warningList').innerHTML=a.map(x=>`<div>• <b>${x.name}</b>：${x.error}</div>`).join('')}
+async function loadAll(){try{$('#error').classList.add('hidden');const a=await loadInventory();const b=await loadAnalytics();loadBillable();showWarnings([...a,...b])}catch(e){$('#error').textContent=e.message;$('#error').classList.remove('hidden')}}
+get('/api/config').then(d=>{$('#title').textContent=d.siteName;document.title=d.siteName}).finally(loadAll);
+window.addEventListener('resize',()=>Object.values(charts).forEach(c=>c.resize()));
+</script></body></html>
