@@ -1,6 +1,157 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cloudflare Status</title><link rel="icon" href="/favicon.svg"><script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script><style>:root{--bg:#f6f8fb;--card:rgba(255,255,255,.88);--border:#e2e8f0;--text:#0f172a;--muted:#64748b}*{box-sizing:border-box}body{margin:0;color:var(--text);background:radial-gradient(circle at 8% 0%,#dbeafe,transparent 28%),radial-gradient(circle at 90% 8%,#ede9fe,transparent 30%),var(--bg);font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}.shell{max-width:1440px;margin:auto;padding:18px}.glass,.card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(18px);box-shadow:0 20px 55px -45px #0f172a;border-radius:20px}.glass{padding:18px}.nav{position:sticky;top:10px;z-index:20;display:flex;gap:6px;padding:7px;overflow:auto}.tab,.btn{border:1px solid var(--border);background:transparent;color:var(--muted);padding:10px 15px;border-radius:12px;font-weight:700;cursor:pointer;white-space:nowrap}.tab.active{background:#0f172a;color:#fff}.card{padding:18px}.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g8{grid-template-columns:repeat(8,minmax(0,1fr))}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.metric{padding:15px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,#fff,#f8fafc)}.label{font-size:12px;color:var(--muted)}.value{font-size:27px;font-weight:900;margin-top:5px}.chart{height:330px}.section{font-size:18px;font-weight:900;border-left:5px solid #2563eb;padding-left:12px;margin:0 0 6px}.muted{color:var(--muted)}.loading{text-align:center;padding:45px;color:var(--muted)}.error{color:#b91c1c;background:#fef2f2;border-color:#fecaca}.select{border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--card);color:var(--text)}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid var(--border);text-align:left;font-size:13px}@media(max-width:900px){.g8,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g2{grid-template-columns:1fr}}@media(max-width:560px){.g8,.g4{grid-template-columns:1fr 1fr}.shell{padding:10px}.value{font-size:22px}}[data-theme=dark]{--bg:#09111f;--card:rgba(15,23,42,.9);--border:#263449;--text:#e5e7eb;--muted:#94a3b8}[data-theme=dark] .metric{background:#111827}</style></head><body><main class="shell"><header class="glass"><div style="display:flex;justify-content:space-between;gap:15px;align-items:center"><div><div style="font-size:12px;color:#2563eb;font-weight:900">CLOUDFLARE ACCOUNT ANALYTICS</div><h1 id="title" style="font-size:30px;margin:10px 0 4px">Cloudflare Status</h1><div class="muted">按产品懒加载 · 首屏不请求全部 Analytics</div></div><div style="display:flex;gap:8px"><button id="refresh" class="btn">刷新</button><button id="theme" class="btn">☾</button></div></div></header><nav id="tabs" class="glass nav" style="margin-top:10px"></nav><div id="err" class="card error" style="display:none;margin-top:10px"></div><div id="app" style="margin-top:15px"></div><footer class="muted" style="text-align:center;font-size:12px;padding:30px">Cloudflare Status V2</footer></main><script>
-const $=s=>document.querySelector(s),T=[['overview','总览'],['zone','网站 / Zone'],['workers','Workers'],['d1','D1'],['kv','KV'],['r2','R2'],['do','Durable Objects'],['workflow','Workflows'],['security','安全']],S={tab:localStorage.cfTab||'overview',days:7,inv:null,account:null};let charts=[];document.documentElement.dataset.theme=localStorage.cfTheme||'light';$('#tabs').innerHTML=T.map(x=>`<button class="tab ${x[0]===S.tab?'active':''}" data-tab="${x[0]}">${x[1]}</button>`).join('');document.addEventListener('click',e=>{let x=e.target.closest('[data-tab]');if(x){S.tab=x.dataset.tab;localStorage.cfTab=S.tab;render()}});$('#theme').onclick=()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';localStorage.cfTheme=document.documentElement.dataset.theme;charts.forEach(c=>c.resize())};$('#refresh').onclick=()=>{if(S.tab==='overview')S.inv=null;else S.account=null;render()};const fmt=n=>new Intl.NumberFormat('zh-CN',{maximumFractionDigits:2}).format(Number(n||0)),bytes=n=>{n=Number(n||0);for(let u of ['B','KB','MB','GB','TB']){if(n<1024)return fmt(n)+' '+u;n/=1024}return fmt(n)+' PB'};async function api(p){let r=await fetch(p),d=await r.json();if(!r.ok||!d.success)throw Error(d.error||'请求失败');return d}function m(a,b,c=''){return`<div class="metric"><div class="label">${a}</div><div class="value">${b}</div><div class="label" style="margin-top:6px">${c}</div></div>`}function box(title,body){return`<section><h2 class="section">${title}</h2>${body}</section>`}function chart(id,o){requestAnimationFrame(()=>{let c=echarts.init(document.getElementById(id));charts.push(c);c.setOption(o)})}function line(rows,name){return{tooltip:{trigger:'axis'},xAxis:{type:'category',data:rows.map(x=>String(x.date).slice(0,16))},yAxis:{type:'value'},series:[{name,type:'line',smooth:true,data:rows.map(x=>x.value),areaStyle:{}}]}}function bar(rows){return{tooltip:{trigger:'axis'},xAxis:{type:'category',data:rows.map(x=>x.name)},yAxis:{type:'value'},series:[{type:'bar',data:rows.map(x=>x.value)}]}}function pie(rows){return{tooltip:{trigger:'item'},series:[{type:'pie',radius:['40%','70%'],data:rows}]}}
-async function inventory(){if(!S.inv)S.inv=await api('/api/inventory');return S.inv}async function render(){charts=[];document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===S.tab));$('#err').style.display='none';$('#app').innerHTML='<div class="card loading">加载中…</div>';try{if(S.tab==='overview')await overview();else if(S.tab==='zone')await zone();else if(S.tab==='security')await security();else await product(S.tab)}catch(e){$('#err').textContent=e.message;$('#err').style.display='block';$('#app').innerHTML='<div class="card loading">模块加载失败</div>'}}
-async function overview(){let d=await inventory();let items=[['Zone',d.counts.zones],['Workers',d.counts.workers],['D1',d.counts.d1],['KV',d.counts.kv],['R2',d.counts.r2],['DO',d.counts.durableObjects],['Queues',d.counts.queues],['Workflows',d.counts.workflows]];$('#app').innerHTML=box('资源总览',`<div class="grid g8">${items.map(x=>m(x[0],fmt(x[1]),'已发现资源')).join('')}</div><div class="card" style="margin-top:15px"><h2 class="section">资源清单</h2><div class="grid g4">${Object.entries(d.resources).map(([k,a])=>`<div class="metric"><b>${k}</b><div class="muted" style="font-size:13px;margin-top:7px;word-break:break-all">${a.length?a.map(x=>x.name||x.id).join(' · '):'无'}</div></div>`).join('')}</div></div>`)}
-async function product(tab){let d=S.account;if(!d)d=S.account=await api(`/api/account?days=${S.days}`);let a={workers:d.workers,d1:d.d1,kv:d.kv,r2:d.r2,do:d.do,workflow:d.workflow}[tab],title={workers:'Workers',d1:'D1',kv:'Workers KV',r2:'R2',do:'Durable Objects',workflow:'Workflows'}[tab],cards='',html='';if(tab==='workers'){cards=m('Requests',fmt(a.total),`Errors ${fmt(a.errors)} · Error Rate ${a.total?(a.errors/a.total*100).toFixed(3):0}%`)+m('Subrequests',fmt(a.subrequests))+m('CPU Time',fmt(a.cpu)+' ms')+m('Wall Time',fmt(a.wall)+' ms');html='<div class="card"><b>Requests 趋势</b><div id="c1" class="chart"></div></div><div class="card"><b>Errors 趋势</b><div id="c2" class="chart"></div></div><div class="card"><b>Worker 排行</b><div id="c3" class="chart"></div></div>'}if(tab==='d1'){cards=m('Rows Read',fmt(a.rowsRead),'计费相关指标')+m('Rows Written',fmt(a.rowsWritten),'计费相关指标')+m('Read Queries',fmt(a.read))+m('Write Queries',fmt(a.write))+m('Storage',bytes(a.storage))+m('Response',bytes(a.response))+m('Latency',fmt(a.latency)+' ms');html='<div class="card"><b>Rows Read / Written</b><div id="c1" class="chart"></div></div><div class="card"><b>数据库 Rows Read 排行</b><div id="c2" class="chart"></div></div>'}if(tab==='kv'){cards=m('Operations',fmt(a.requests))+m('Storage',bytes(a.storage))+m('Namespaces',fmt(a.namespaces.length));html='<div class="card"><b>操作趋势</b><div id="c1" class="chart"></div></div><div class="card"><b>操作类型</b><div id="c2" class="chart"></div></div><div class="card"><b>Namespace 排行</b><div id="c3" class="chart"></div></div>'}if(tab==='r2'){cards=m('Operations',fmt(a.operations))+m('Storage',bytes(a.storage))+m('Objects',fmt(a.objects));html='<div class="card"><b>操作趋势</b><div id="c1" class="chart"></div></div><div class="card"><b>操作类型</b><div id="c2" class="chart"></div></div><div class="card"><b>Bucket 排行</b><div id="c3" class="chart"></div></div>'}if(tab==='do'){cards=m('Requests',fmt(a.requests))+m('Errors',fmt(a.errors))+m('CPU',fmt(a.cpu)+' ms')+m('Storage',bytes(a.storage));html='<div class="card"><b>请求趋势</b><div id="c1" class="chart"></div></div><div class="card"><b>Namespace 排行</b><div id="c2" class="chart"></div></div>'}if(tab==='workflow'){cards=m('Runs',fmt(a.runs))+m('Steps',fmt(a.steps))+m('Wall Time',fmt(a.wall)+' ms');html='<div class="card"><b>Runs 趋势</b><div id="c1" class="chart"></div></div><div class="card"><b>Workflow 排行</b><div id="c2" class="chart"></div></div>'}$('#app').innerHTML=box(title,`<div class="grid g4">${cards}</div><div class="grid g2" style="margin-top:15px">${html}</div>`);if(tab==='workers'){chart('c1',line(a.trend,'Requests'));chart('c2',line(a.errorsTrend,'Errors'));chart('c3',bar(a.scripts))}if(tab==='d1'){chart('c1',{tooltip:{trigger:'axis'},xAxis:{type:'category',data:a.readTrend.map(x=>x.date)},yAxis:{type:'value'},series:[{name:'Rows Read',type:'line',data:a.readTrend.map(x=>x.value),smooth:true},{name:'Rows Written',type:'line',data:a.writeTrend.map(x=>x.value),smooth:true}]});chart('c2',bar(a.databases))}if(tab==='kv'){chart('c1',line(a.trend,'Operations'));chart('c2',pie(a.actions));chart('c3',bar(a.namespaces))}if(tab==='r2'){chart('c1',line(a.trend,'Operations'));chart('c2',pie(a.actions));chart('c3',bar(a.buckets))}if(tab==='do'){chart('c1',line(a.trend,'Requests'));chart('c2',bar(a.namespaces))}if(tab==='workflow'){chart('c1',line(a.trend,'Runs'));chart('c2',bar(a.names))}}
-async function zone(){let d=await inventory();$('#app').innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><h2 class="section">网站 / Zone</h2><div class="muted">选择 Zone 后才请求 HTTP Analytics。</div></div><select id="zs" class="select">${d.resources.zones.map(z=>`<option value="${z.id}">${z.name}</option>`).join('')}</select></div></div><div id="zb" style="margin-top:15px"></div>`;$('#zs').onchange=loadZone;await loadZone()}async function loadZone(){let z=$('#zs').value,d=await api(`/api/zone?days=${S.days}&zone=${encodeURIComponent(z)}`);$('#zb').innerHTML=`<div class="grid g4">${m('Requests',fmt(d.total))+m('Visits',fmt(d.visits))+m('Edge Response',bytes(d.bytes))+m('Firewall Events',fmt(d.firewall.count))}</div><div class="grid g2" style="margin-top:15px"><div class="card"><b>请求趋势</b><div id="z1" class="chart"></div></div><div class="card"><b>国家</b><div id="z2" class="chart"></div></div><div class="card"><b>状态码</b><div id="z3" class="chart"></div></div><div class="card"><b>浏览器</b><div id="z4" class="chart"></div></div><div class="card"><b>设备</b><div id="z5" class="chart"></div></div><div class="card"><b>Colo</b><div id="z6" class="chart"></div></div><div class="card"><b>Firewall Action</b><div id="z7" class="chart"></div></div></div>`;chart('z1',line(d.trend,'Requests'));[['z2',d.countries],['z3',d.statuses],['z4',d.browsers],['z5',d.devices],['z6',d.colos],['z7',d.firewall.actions]].forEach(x=>chart(x[0],bar(x[1])))}async function security(){await zone()}api('/api/config').then(x=>$('#title').textContent=x.siteName).finally(render);window.onresize=()=>charts.forEach(c=>c.resize());</script></body></html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="icon" href="/favicon.svg"><title>Cloudflare Status</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+@import url('https://fastly.jsdelivr.net/npm/cn-fontsource-ding-talk-jin-bu-ti-regular/font.css');
+:root{--text:#0f172a;--muted:#64748b;--line:#e2e8f0;--panel:rgba(255,255,255,.72);--card:rgba(255,255,255,.94);--blue:#2563eb}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:"DingTalk JinBuTi",Roboto,system-ui,sans-serif!important;color:var(--text)}
+body{background:radial-gradient(circle at 8% 0%,rgba(125,211,252,.28),transparent 26%),radial-gradient(circle at 88% 8%,rgba(196,181,253,.18),transparent 28%),linear-gradient(180deg,#f8fbff 0%,#f6f8fb 45%,#eef4ff 100%)}
+body.dark{--text:#e5e7eb;--muted:#94a3b8;--line:#263449;--panel:rgba(15,23,42,.72);--card:rgba(15,23,42,.9);background:radial-gradient(circle at 8% 0%,rgba(14,116,144,.18),transparent 26%),linear-gradient(180deg,#0b1220,#0f172a)}
+.app-shell{max-width:1440px;margin:20px auto;padding:16px;background:rgba(255,255,255,.56);border:1px solid rgba(226,232,240,.78);box-shadow:0 24px 80px -52px rgba(15,23,42,.32);backdrop-filter:blur(20px);border-radius:28px}
+.dark .app-shell{background:rgba(15,23,42,.45);border-color:#263449}
+.glass-panel{background:var(--panel);backdrop-filter:blur(18px);border:1px solid var(--line);box-shadow:0 18px 52px -42px rgba(15,23,42,.35)}
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:28px;background:linear-gradient(135deg,rgba(240,249,255,.9),rgba(255,255,255,.62) 55%,rgba(245,243,255,.78))}
+.dark .hero{background:linear-gradient(135deg,rgba(14,42,63,.92),rgba(15,23,42,.8))}
+.hero:after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.07) 1px,transparent 1px);background-size:26px 26px;pointer-events:none}
+.hero>*{position:relative;z-index:1}.hero-badge{display:inline-flex;border:1px solid #bae6fd;background:rgba(240,249,255,.84);padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800}
+.dark .hero-badge{background:rgba(14,116,144,.18);border-color:#155e75;color:#bae6fd}
+.nav{margin-top:14px;padding:7px;border-radius:18px;display:flex;gap:5px;overflow-x:auto;position:sticky;top:12px;z-index:50}
+.nav button{border:0;background:transparent;color:var(--muted);padding:11px 16px;border-radius:12px;font-weight:800;white-space:nowrap;cursor:pointer;transition:.2s}
+.nav button:hover{background:rgba(255,255,255,.65);color:var(--text)}.nav button.active{background:#0f172a;color:white;box-shadow:0 12px 30px -20px #0f172a}
+.dark .nav button.active{background:#e5e7eb;color:#0f172a}
+.control{margin-top:14px;padding:13px 15px;border-radius:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.time button{height:36px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);padding:0 14px;font-weight:700}.time button.active{background:#0f172a;color:#fff;border-color:#0f172a}
+.dark .time button.active{background:#e5e7eb;color:#0f172a}
+.metric-card,.chart-card{position:relative;overflow:hidden;border:1px solid var(--line);background:var(--card);box-shadow:0 20px 55px -45px rgba(15,23,42,.42);transition:.22s;border-radius:20px}
+.metric-card{padding:18px}.metric-card:hover,.chart-card:hover{transform:translateY(-2px);border-color:rgba(56,189,248,.42);box-shadow:0 28px 70px -48px rgba(15,23,42,.45)}
+.metric-label{font-size:12px;color:var(--muted);font-weight:700}.metric-value{font-size:30px;font-weight:900;margin-top:5px;letter-spacing:-.03em}.metric-sub{font-size:12px;color:var(--muted);margin-top:7px}
+.section{font-size:18px;font-weight:900;padding-left:16px;position:relative;margin:0 0 14px}.section:before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:5px;height:21px;border-radius:999px;background:linear-gradient(180deg,#38bdf8,#2563eb)}
+.chart-card{padding:18px;min-height:370px}.chart{height:310px;width:100%}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}.table th{color:var(--muted);font-weight:800}
+.select{height:40px;border:1px solid var(--line);border-radius:13px;background:var(--card);color:var(--text);padding:0 12px;outline:0}.btn{height:40px;border:1px solid var(--line);border-radius:13px;background:var(--card);color:var(--text);padding:0 14px;font-weight:800;cursor:pointer}.btn:hover{border-color:#7dd3fc}
+.loading{padding:70px;text-align:center;color:var(--muted)}.error{padding:18px;border-radius:18px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c}
+.dark .error{background:#3b1515;border-color:#7f1d1d;color:#fecaca}
+.footer{margin-top:18px;padding:20px;text-align:center;color:var(--muted);font-size:12px}.theme{position:fixed;right:20px;bottom:20px;z-index:100}
+@media(max-width:640px){.app-shell{margin:0;padding:10px;border-radius:0;border-left:0;border-right:0}.hero{padding:22px}.nav{top:5px}.theme{right:12px;bottom:12px}}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <section class="hero">
+    <div class="hero-badge">CLOUDFLARE ACCOUNT ANALYTICS</div>
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-5 mt-4">
+      <div><h1 id="siteTitle" class="text-3xl md:text-4xl font-black tracking-tight">Cloudflare Status</h1>
+      <p class="mt-2 text-sm md:text-base" style="color:var(--muted)">Cloudflare 资源、Analytics 与用量监控 · 按页签懒加载</p></div>
+      <div class="flex gap-2"><button id="refresh" class="btn">↻ 刷新当前页</button><button id="theme" class="btn">☾ 主题</button></div>
+    </div>
+  </section>
+  <nav class="nav glass-panel" id="nav"></nav>
+  <div id="controls"></div>
+  <div id="error" class="error hidden mt-4"></div>
+  <main id="content" class="mt-4"></main>
+  <footer class="footer glass-panel">Cloudflare Status · GraphQL Analytics · 数据按产品独立请求，避免首页一次性拉取所有监控数据</footer>
+</div>
+<script>
+const tabs=[["overview","总览"],["zone","网站 / Zone"],["workers","Workers"],["d1","D1"],["kv","KV"],["r2","R2"],["do","Durable Objects"]];
+const S={tab:localStorage.getItem("cf-tab")||"overview",days:Number(localStorage.getItem("cf-days")||7),inv:null,cache:{},charts:[]};
+const $=s=>document.querySelector(s);
+document.body.classList.toggle("dark",localStorage.getItem("cf-theme")==="dark");
+$("#nav").innerHTML=tabs.map(([k,n])=>`<button data-tab="${k}" class="${S.tab===k?"active":""}">${n}</button>`).join("");
+document.addEventListener("click",e=>{
+ const b=e.target.closest("[data-tab]");if(b){S.tab=b.dataset.tab;localStorage.setItem("cf-tab",S.tab);render()}
+ const d=e.target.closest("[data-days]");if(d){S.days=+d.dataset.days;localStorage.setItem("cf-days",S.days);delete S.cache[S.tab];render()}
+});
+$("#refresh").onclick=()=>{delete S.cache[S.tab];render()};
+$("#theme").onclick=()=>{const dark=!document.body.classList.contains("dark");document.body.classList.toggle("dark",dark);localStorage.setItem("cf-theme",dark?"dark":"light");renderCharts()};
+window.addEventListener("resize",()=>S.charts.forEach(x=>x.resize()));
+
+async function api(path){const r=await fetch(path);const d=await r.json();if(!r.ok||!d.success)throw Error(d.error||"请求失败");return d.data}
+async function inventory(){return S.inv||(S.inv=await api("/api/inventory"))}
+const nf=n=>new Intl.NumberFormat("zh-CN",{maximumFractionDigits:2}).format(Number(n||0));
+const bytes=n=>{n=Number(n||0);const u=["B","KB","MB","GB","TB","PB"];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return nf(n)+" "+u[i]};
+const pct=(a,b)=>b?((a/b)*100).toFixed(2)+"%":"0%";
+function metrics(items){return `<div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3">${items.map(x=>`<div class="metric-card"><div class="metric-label">${x[0]}</div><div class="metric-value">${x[1]}</div><div class="metric-sub">${x[2]||""}</div></div>`).join("")}</div>`}
+function controls(extra=""){return `<div class="control glass-panel"><div class="time flex gap-1">${[1,7,14,30].map(d=>`<button data-days="${d}" class="${S.days===d?"active":""}">${d} 天</button>`).join("")}</div>${extra}</div>`}
+function section(title,sub=""){return `<div class="flex items-end justify-between gap-3 mb-3"><div><h2 class="section">${title}</h2>${sub?`<div class="text-xs ml-4" style="color:var(--muted)">${sub}</div>`:""}</div></div>`}
+function chart(id,opt){requestAnimationFrame(()=>{const el=document.getElementById(id);if(!el)return;const c=echarts.init(el);S.charts.push(c);c.setOption(opt);})}
+function line(rows,name="请求"){return {tooltip:{trigger:"axis"},xAxis:{type:"category",data:(rows||[]).map(x=>String(x.date||"").replace("T"," ").slice(0,16))},yAxis:{type:"value"},series:[{name,type:"line",smooth:true,areaStyle:{opacity:.12},data:(rows||[]).map(x=>x.value||0)}]}}
+function bars(rows){return {tooltip:{trigger:"axis"},grid:{left:50,right:25,bottom:55},xAxis:{type:"category",data:(rows||[]).slice(0,20).map(x=>String(x.name))},yAxis:{type:"value"},series:[{type:"bar",data:(rows||[]).slice(0,20).map(x=>x.value||0),barMaxWidth:28}]}}
+function pie(rows){return {tooltip:{trigger:"item"},series:[{type:"pie",radius:["38%","70%"],data:(rows||[]).map(x=>({name:x.name,value:x.value}))}]}}
+function renderCharts(){S.charts.forEach(x=>x.dispose());S.charts=[]}
+
+async function render(){
+ renderCharts();$("#nav").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x.dataset.tab===S.tab));
+ $("#error").classList.add("hidden");$("#content").innerHTML=`<div class="metric-card loading">正在加载「${tabs.find(x=>x[0]===S.tab)[1]}」…</div>`;$("#controls").innerHTML="";
+ try{
+   if(S.tab==="overview")return await overview();
+   if(S.tab==="zone")return await zone();
+   return await product(S.tab);
+ }catch(e){$("#error").textContent=e.message;$("#error").classList.remove("hidden");$("#content").innerHTML=`<div class="metric-card loading">当前模块请求失败。不会把错误伪装成 0。</div>`}
+}
+
+async function overview(){
+ const d=await inventory(),c=d.counts||{};
+ $("#content").innerHTML=`${section("资源总览","这里只读取资源清单，不读取历史 Analytics，因此首页请求量很低。")}
+ ${metrics([["Zone",nf(c.zones),"已发现资源"],["Workers",nf(c.workers),"已发现资源"],["D1",nf(c.d1),"已发现资源"],["KV Namespace",nf(c.kv),"已发现资源"],["R2 Bucket",nf(c.r2),"已发现资源"],["Durable Objects",nf(c.durableObjects),"已发现资源"],["Queues",nf(c.queues),"已发现资源"],["Workflows",nf(c.workflows),"已发现资源"]])}
+ <div class="grid lg:grid-cols-2 gap-4 mt-4">
+ ${resourceCard("Zone",d.resources.zones,x=>x.name)}
+ ${resourceCard("Workers",d.resources.workers,x=>x.name||x.id)}
+ ${resourceCard("D1",d.resources.d1,x=>x.name)}
+ ${resourceCard("KV",d.resources.kv,x=>x.name)}
+ ${resourceCard("R2",d.resources.r2,x=>x.name)}
+ ${resourceCard("Durable Objects",d.resources.durableObjects,x=>x.name)}
+ </div>
+ ${d.warnings?.length?`<div class="metric-card mt-4 text-xs" style="color:var(--muted)">资源发现警告：${d.warnings.map(x=>x.module+": "+x.error).join(" · ")}</div>`:""}`;
+}
+function resourceCard(title,rows,fn){rows=Array.isArray(rows)?rows:[];return `<div class="chart-card"><h3 class="font-black mb-3">${title} <span class="text-xs font-normal" style="color:var(--muted)">(${rows.length})</span></h3><div class="flex flex-wrap gap-2">${rows.length?rows.map(x=>`<span class="px-3 py-2 rounded-xl text-xs font-bold" style="background:rgba(56,189,248,.1);color:#0369a1">${fn(x)}</span>`).join(""):"<span style='color:var(--muted)'>无资源</span>"}</div></div>`}
+
+async function product(tab){
+ const d=S.cache[tab]||(S.cache[tab]=await api(`/api/${tab}?days=${S.days}`));
+ $("#controls").innerHTML=controls();
+ const title={workers:"Workers",d1:"D1",kv:"Workers KV",r2:"R2",do:"Durable Objects"}[tab];
+ let body="";
+ if(tab==="workers")body=metrics([["Requests",nf(d.requests)],["Errors",nf(d.errors),`错误率 ${pct(d.errors,d.requests)}`],["Subrequests",nf(d.subrequests)],["CPU P50",nf(d.cpuP50)+" ms"],["CPU P99",nf(d.cpuP99)+" ms"]])+`<div class="grid lg:grid-cols-2 gap-4 mt-4"><div class="chart-card">${section("请求趋势")}<div id="c1" class="chart"></div></div><div class="chart-card">${section("错误趋势")}<div id="c2" class="chart"></div></div><div class="chart-card">${section("Worker 请求排行")}<div id="c3" class="chart"></div></div><div class="chart-card">${section("状态分布")}<div id="c4" class="chart"></div></div></div>`;
+ if(tab==="d1")body=metrics([["Rows Read",nf(d.rowsRead),"计费相关"],["Rows Written",nf(d.rowsWritten),"计费相关"],["Read Queries",nf(d.readQueries)],["Write Queries",nf(d.writeQueries)],["Storage",bytes(d.storage)],["Response",bytes(d.responseBytes)],["Latency",nf(d.latency)+" ms"],["P99 Latency",nf(d.p99)+" ms"]])+`<div class="grid lg:grid-cols-2 gap-4 mt-4"><div class="chart-card">${section("Rows Read / Written")}<div id="c1" class="chart"></div></div><div class="chart-card">${section("数据库 Rows Read 排行")}<div id="c2" class="chart"></div></div></div>`;
+ if(tab==="kv")body=metrics([["Operations",nf(d.operations)],["Reads",nf(d.reads)],["Writes",nf(d.writes)],["Deletes",nf(d.deletes)],["Lists",nf(d.lists)],["Storage",bytes(d.storage)],["Keys",nf(d.keys)]] )+`<div class="grid lg:grid-cols-2 gap-4 mt-4"><div class="chart-card">${section("KV 操作趋势")}<div id="c1" class="chart"></div></div><div class="chart-card">${section("操作类型")}<div id="c2" class="chart"></div></div><div class="chart-card">${section("Namespace 排行")}<div id="c3" class="chart"></div></div></div>`;
+ if(tab==="r2")body=metrics([["Operations",nf(d.operations)],["Object Storage",bytes(d.storage)],["Metadata",bytes(d.metadata)],["Objects",nf(d.objects)],["Pending Uploads",nf(d.uploads)]])+`<div class="grid lg:grid-cols-2 gap-4 mt-4"><div class="chart-card">${section("R2 操作趋势")}<div id="c1" class="chart"></div></div><div class="chart-card">${section("操作类型")}<div id="c2" class="chart"></div></div><div class="chart-card">${section("Bucket 排行")}<div id="c3" class="chart"></div></div><div class="chart-card">${section("HTTP 状态")}<div id="c4" class="chart"></div></div></div>`;
+ if(tab==="do")body=metrics([["Requests",nf(d.requests)],["Subrequests",nf(d.subrequests)],["CPU Time",nf(d.cpu)+" ms"],["Response",bytes(d.responseBytes)],["Storage",bytes(d.storage)],["Memory P50",bytes(d.memoryP50)],["Memory P99",bytes(d.memoryP99)]])+`<div class="grid lg:grid-cols-2 gap-4 mt-4"><div class="chart-card">${section("DO 请求趋势")}<div id="c1" class="chart"></div></div><div class="chart-card">${section("Namespace 请求排行")}<div id="c2" class="chart"></div></div></div>`;
+ $("#content").innerHTML=`${section(title,`最近 ${S.days} 天 · 进入此页才请求该产品 Analytics`)}${body}`;
+ if(tab==="workers"){chart("c1",line(d.trend));chart("c2",line(d.errorsTrend,"错误"));chart("c3",bars(d.scripts));chart("c4",pie(d.statuses))}
+ if(tab==="d1"){chart("c1",{tooltip:{trigger:"axis"},xAxis:{type:"category",data:(d.readTrend||[]).map(x=>x.date)},yAxis:{type:"value"},series:[{name:"Rows Read",type:"line",smooth:true,data:(d.readTrend||[]).map(x=>x.value)},{name:"Rows Written",type:"line",smooth:true,data:(d.writeTrend||[]).map(x=>x.value)}]});chart("c2",bars(d.databases))}
+ if(tab==="kv"){chart("c1",line(d.trend,"Operations"));chart("c2",pie(d.actions));chart("c3",bars(d.namespaces))}
+ if(tab==="r2"){chart("c1",line(d.trend,"Operations"));chart("c2",pie(d.actions));chart("c3",bars(d.buckets));chart("c4",pie(d.statuses))}
+ if(tab==="do"){chart("c1",line(d.trend));chart("c2",bars(d.namespaces))}
+}
+
+async function zone(){
+ const inv=await inventory(),zones=Array.isArray(inv.resources?.zones)?inv.resources.zones:[];
+ $("#controls").innerHTML=controls(`<select id="zoneSelect" class="select">${zones.map(z=>`<option value="${z.id}">${z.name}</option>`).join("")}</select>`);
+ if(!zones.length){$("#content").innerHTML=`<div class="metric-card loading">没有发现 Zone。</div>`;return}
+ $("#zoneSelect").onchange=()=>loadZone();
+ await loadZone();
+}
+async function loadZone(){
+ const z=$("#zoneSelect").value,d=await api(`/api/zone?days=${S.days}&zone=${encodeURIComponent(z)}`);
+ $("#content").innerHTML=`${section("网站 / Zone","请求、流量、缓存、安全事件及访问维度。")}
+ ${metrics([["Requests",nf(d.requests)],["Visits",nf(d.visits)],["Traffic",bytes(d.bytes)],["Cache Hit",pct(d.cacheHits,d.requests)],["Threats",nf(d.threats)]])}
+ <div class="grid lg:grid-cols-2 gap-4 mt-4">
+ <div class="chart-card">${section("请求趋势")}<div id="z1" class="chart"></div></div>
+ <div class="chart-card">${section("流量趋势")}<div id="z2" class="chart"></div></div>
+ <div class="chart-card">${section("国家")}<div id="z3" class="chart"></div></div>
+ <div class="chart-card">${section("HTTP 状态")}<div id="z4" class="chart"></div></div>
+ <div class="chart-card">${section("浏览器")}<div id="z5" class="chart"></div></div>
+ <div class="chart-card">${section("设备")}<div id="z6" class="chart"></div></div>
+ <div class="chart-card">${section("缓存状态")}<div id="z7" class="chart"></div></div>
+ <div class="chart-card">${section("Colo")}<div id="z8" class="chart"></div></div>
+ <div class="chart-card">${section("Firewall Action")}<div id="z9" class="chart"></div></div>
+ <div class="chart-card">${section("Threat 来源")}<div id="z10" class="chart"></div></div>
+ </div>`;
+ chart("z1",line(d.trend));chart("z2",line(d.trafficTrend,"Bytes"));
+ [["z3",d.countries],["z4",d.statuses],["z5",d.browsers],["z6",d.devices],["z7",d.cache],["z8",d.colos],["z9",d.threatActions],["z10",d.sources]].forEach(([id,r])=>chart(id,bars(r)));
+}
+api("/api/config").then(x=>$("#siteTitle").textContent=x.siteName).catch(()=>{}).finally(render);
+</script>
+</body></html>

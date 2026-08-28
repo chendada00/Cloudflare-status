@@ -1,16 +1,256 @@
-const CF='https://api.cloudflare.com/client/v4',GQL=CF+'/graphql';
-const out=(x,s=200)=>new Response(JSON.stringify({success:true,...x}),{status:s,headers:{'content-type':'application/json;charset=utf-8','cache-control':'no-store'}});
-const fail=(e,s=500)=>new Response(JSON.stringify({success:false,error:String(e?.message||e)}),{status:s,headers:{'content-type':'application/json;charset=utf-8','cache-control':'no-store'}});
-function cfg(e){if(!e.CLOUDFLARE_API_TOKEN||!e.CLOUDFLARE_ACCOUNT_ID)throw Error('未配置 CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID');return {t:e.CLOUDFLARE_API_TOKEN,a:e.CLOUDFLARE_ACCOUNT_ID}}
-async function rest(p,t){const r=await fetch(CF+p,{headers:{Authorization:`Bearer ${t}`}}),d=await r.json();if(!r.ok||d.success===false)throw Error(d.errors?.map(x=>x.message).join('; ')||`REST ${r.status}`);return d.result}
-async function gql(q,v,t){const r=await fetch(GQL,{method:'POST',headers:{Authorization:`Bearer ${t}`,'content-type':'application/json'},body:JSON.stringify({query:q,variables:v})}),d=await r.json();if(!r.ok||d.errors)throw Error(d.errors?.map(x=>x.message).join('; ')||`GraphQL ${r.status}`);return d.data}
-const N=x=>Number(x||0),SUM=(a,f)=>a.reduce((s,x)=>s+N(f(x)),0);
-function range(u){const days=Math.min(31,Math.max(1,N(u.searchParams.get('days')||7))),e=new Date(),s=new Date(e.getTime()-days*864e5);return{days,s:s.toISOString(),e:e.toISOString()}}
-async function inventory(env){const {t,a}=cfg(env),w=[];const get=async(n,p)=>{try{return[n,await rest(p,t)]}catch(e){w.push({name:n,error:e.message});return[n,null]}};const x=Object.fromEntries(await Promise.all([get('zones','/zones?per_page=100'),get('workers',`/accounts/${a}/workers/scripts?per_page=100`),get('d1',`/accounts/${a}/d1/database?per_page=100`),get('kv',`/accounts/${a}/storage/kv/namespaces?per_page=100`),get('r2',`/accounts/${a}/r2/buckets?per_page=100`),get('do',`/accounts/${a}/workers/durable_objects/namespaces?per_page=100`),get('queues',`/accounts/${a}/queues?per_page=100`),get('workflows',`/accounts/${a}/workflows?per_page=100`)]));return{warnings:w,counts:{zones:x.zones?.length||0,workers:x.workers?.length||0,d1:x.d1?.length||0,kv:x.kv?.length||0,r2:x.r2?.length||0,durableObjects:x.do?.length||0,queues:x.queues?.length||0,workflows:x.workflows?.length||0},resources:{zones:(x.zones||[]).map(z=>({id:z.id,name:z.name,status:z.status,plan:z.plan?.name||''})),workers:(x.workers||[]).map(x=>({id:x.id})),d1:(x.d1||[]).map(x=>({id:x.uuid,name:x.name})),kv:(x.kv||[]).map(x=>({id:x.id,name:x.title})),r2:(x.r2||[]).map(x=>({name:x.name})),durableObjects:(x.do||[]).map(x=>({id:x.id,name:x.name,script:x.script})),queues:(x.queues||[]).map(x=>({id:x.queue_id||x.id,name:x.queue_name||x.name})),workflows:(x.workflows||[]).map(x=>({id:x.id,name:x.name}))}}}
-const AQ=`query($a:String!,$s:Time!,$e:Time!){viewer{accounts(filter:{accountTag:$a}){workers:workersInvocationsAdaptive(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){sum{requests errors subrequests cpuTime wallTime}dimensions{datetime scriptName}}d1:d1AnalyticsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){sum{readQueries writeQueries rowsRead rowsWritten queryBatchResponseBytes queryBatchTimeMs databaseSizeBytes}dimensions{date databaseId}}kv:kvOperationsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){sum{requests}dimensions{date actionType namespaceId}}kvs:kvStorageAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){max{bytes}dimensions{date namespaceId}}r2:r2OperationsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){count dimensions{date actionType bucketName actionStatus}}r2s:r2StorageAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){max{payloadSize objects}dimensions{date bucketName}}doI:durableObjectsInvocationsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){sum{requests errors responseBodySize}dimensions{date namespaceName}}doP:durableObjectsPeriodicGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){sum{cpuTime}dimensions{date namespaceName}}doS:durableObjectsStorageGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){max{storedBytes}dimensions{date namespaceName}}wf:workflowsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){count sum{wallTime stepCount}dimensions{date workflowName}}}}}`;
-function days(a,f){const m={};for(const x of a||[]){const d=x.dimensions?.date||x.dimensions?.datetime?.slice(0,10);if(d)m[d]=(m[d]||0)+N(f(x))}return Object.entries(m).sort().map(([date,value])=>({date,value}))}function groups(a,dim,f){const m={};for(const x of a||[]){const k=x.dimensions?.[dim]||'Unknown';m[k]=(m[k]||0)+N(f(x))}return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([name,value])=>({name,value}))}
-async function account(env,u){const {t,a}=cfg(env),r=range(u),d=(await gql(AQ,{a,s:r.s,e:r.e},t)).viewer.accounts?.[0]||{},w=d.workers||[],q=d.d1||[],k=d.kv||[],ks=d.kvs||[],ro=d.r2||[],rs=d.r2s||[],di=d.doI||[],dp=d.doP||[],ds=d.doS||[],wf=d.wf||[];return{days:r.days,workers:{total:SUM(w,x=>x.sum?.requests),errors:SUM(w,x=>x.sum?.errors),subrequests:SUM(w,x=>x.sum?.subrequests),cpu:SUM(w,x=>x.sum?.cpuTime),wall:SUM(w,x=>x.sum?.wallTime),trend:days(w,x=>x.sum?.requests),errorsTrend:days(w,x=>x.sum?.errors),scripts:groups(w,'scriptName',x=>x.sum?.requests)},d1:{read:SUM(q,x=>x.sum?.readQueries),write:SUM(q,x=>x.sum?.writeQueries),rowsRead:SUM(q,x=>x.sum?.rowsRead),rowsWritten:SUM(q,x=>x.sum?.rowsWritten),response:SUM(q,x=>x.sum?.queryBatchResponseBytes),latency:SUM(q,x=>x.sum?.queryBatchTimeMs),storage:Math.max(0,...q.map(x=>N(x.sum?.databaseSizeBytes))),readTrend:days(q,x=>x.sum?.rowsRead),writeTrend:days(q,x=>x.sum?.rowsWritten),databases:groups(q,'databaseId',x=>x.sum?.rowsRead)},kv:{requests:SUM(k,x=>x.sum?.requests),storage:Math.max(0,...ks.map(x=>N(x.max?.bytes))),trend:days(k,x=>x.sum?.requests),actions:groups(k,'actionType',x=>x.sum?.requests),namespaces:groups(k,'namespaceId',x=>x.sum?.requests)},r2:{operations:SUM(ro,x=>x.count),storage:Math.max(0,...rs.map(x=>N(x.max?.payloadSize))),objects:Math.max(0,...rs.map(x=>N(x.max?.objects))),trend:days(ro,x=>x.count),actions:groups(ro,'actionType',x=>x.count),buckets:groups(ro,'bucketName',x=>x.count)},do:{requests:SUM(di,x=>x.sum?.requests),errors:SUM(di,x=>x.sum?.errors),cpu:SUM(dp,x=>x.sum?.cpuTime),storage:Math.max(0,...ds.map(x=>N(x.max?.storedBytes))),trend:days(di,x=>x.sum?.requests),namespaces:groups(di,'namespaceName',x=>x.sum?.requests)},workflow:{runs:SUM(wf,x=>x.count),steps:SUM(wf,x=>x.sum?.stepCount),wall:SUM(wf,x=>x.sum?.wallTime),trend:days(wf,x=>x.count),names:groups(wf,'workflowName',x=>x.count)}}}
-const ZQ=`query($z:String!,$s:Time!,$e:Time!){viewer{zones(filter:{zoneTag:$z}){http:httpRequestsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e,requestSource:"eyeball"}){count sum{visits edgeResponseBytes}dimensions{datetimeHour}}country:httpRequestsAdaptiveGroups(limit:100,filter:{datetime_geq:$s,datetime_leq:$e,requestSource:"eyeball"}){count dimensions{clientCountryName}}status:httpRequestsAdaptiveGroups(limit:100,filter:{datetime_geq:$s,datetime_leq:$e,requestSource:"eyeball"}){count dimensions{edgeResponseStatus}}browser:httpRequestsAdaptiveGroups(limit:100,filter:{datetime_geq:$s,datetime_leq:$e,requestSource:"eyeball"}){count dimensions{clientBrowserFamily}}device:httpRequestsAdaptiveGroups(limit:100,filter:{datetime_geq:$s,datetime_leq:$e,requestSource:"eyeball"}){count dimensions{clientDeviceType}}colo:httpRequestsAdaptiveGroups(limit:100,filter:{datetime_geq:$s,datetime_leq:$e,requestSource:"eyeball"}){count dimensions{coloCode}}}}}`;
-const FQ=`query($z:String!,$s:Time!,$e:Time!){viewer{zones(filter:{zoneTag:$z}){firewallEventsAdaptive(filter:{datetime_geq:$s,datetime_leq:$e},limit:1000,orderBy:[datetime_DESC]){action clientCountryName source clientRequestHTTPHost clientRequestPath datetime}}}}`;
-async function zone(env,u){const {t}=cfg(env),z=u.searchParams.get('zone');if(!z)throw Error('请选择 Zone');const r=range(u),q=(await gql(ZQ,{z,s:r.s,e:r.e},t)).viewer.zones?.[0]||{};let f=[];try{f=(await gql(FQ,{z,s:r.s,e:r.e},t)).viewer.zones?.[0]?.firewallEventsAdaptive||[]}catch(e){}const h=q.http||[],raw=(a,d)=>a.map(x=>({name:x.dimensions?.[d]||'Unknown',value:N(x.count)})).sort((a,b)=>b.value-a.value).slice(0,20),acts=Object.entries(f.reduce((m,x)=>(m[x.action]=(m[x.action]||0)+1,m),{})).map(([name,value])=>({name,value}));return{total:SUM(h,x=>x.count),visits:SUM(h,x=>x.sum?.visits),bytes:SUM(h,x=>x.sum?.edgeResponseBytes),trend:h.map(x=>({date:x.dimensions?.datetimeHour,value:N(x.count)})),countries:raw(q.country||[],'clientCountryName'),statuses:raw(q.status||[],'edgeResponseStatus'),browsers:raw(q.browser||[],'clientBrowserFamily'),devices:raw(q.device||[],'clientDeviceType'),colos:raw(q.colo||[],'coloCode'),firewall:{count:f.length,actions:acts,recent:f.slice(0,20)}}}
-export async function onRequest({request,env}){const u=new URL(request.url),p=u.pathname.replace(/^\/api\/?/,'');try{if(p==='config')return out({siteName:env.SITE_NAME||'Cloudflare Status'});if(p==='inventory')return out(await inventory(env));if(p==='account')return out(await account(env,u));if(p==='zone')return out(await zone(env,u));return fail('API 不存在',404)}catch(e){return fail(e)}}
+
+const API="https://api.cloudflare.com/client/v4";
+const GQL=API+"/graphql";
+
+const json=(x,status=200)=>new Response(JSON.stringify(x),{
+  status,headers:{"content-type":"application/json;charset=utf-8","cache-control":"no-store"}
+});
+const good=(data)=>json({success:true,data});
+const fail=(message,status=500,extra={})=>json({success:false,error:String(message),...extra},status);
+
+function envConfig(env){
+  if(!env.CLOUDFLARE_API_TOKEN) throw new Error("未配置 CLOUDFLARE_API_TOKEN");
+  if(!env.CLOUDFLARE_ACCOUNT_ID) throw new Error("未配置 CLOUDFLARE_ACCOUNT_ID");
+  return {token:env.CLOUDFLARE_API_TOKEN,account:env.CLOUDFLARE_ACCOUNT_ID};
+}
+async function rest(path,token){
+  const r=await fetch(API+path,{headers:{Authorization:`Bearer ${token}`,Accept:"application/json"}});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok || d.success===false) throw new Error(d.errors?.map(e=>e.message).join("; ")||`Cloudflare REST ${r.status}`);
+  return d.result;
+}
+/* Cloudflare has several REST endpoints whose result is an array and several
+   whose result is an object containing a result array. Normalize all of them. */
+function arr(v){
+  if(Array.isArray(v)) return v;
+  if(v && Array.isArray(v.result)) return v.result;
+  if(v && Array.isArray(v.items)) return v.items;
+  if(v && Array.isArray(v.buckets)) return v.buckets;
+  if(v && Array.isArray(v.namespaces)) return v.namespaces;
+  if(v && Array.isArray(v.scripts)) return v.scripts;
+  return [];
+}
+async function gql(query,variables,token){
+  const r=await fetch(GQL,{
+    method:"POST",
+    headers:{Authorization:`Bearer ${token}`,Accept:"application/json","Content-Type":"application/json"},
+    body:JSON.stringify({query,variables})
+  });
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok || d.errors?.length) throw new Error(d.errors?.map(e=>e.message).join("; ")||`GraphQL ${r.status}`);
+  return d.data;
+}
+function range(url,kind="time"){
+  const days=Math.min(31,Math.max(1,Number(url.searchParams.get("days")||7)));
+  const end=new Date(), start=new Date(end.getTime()-days*86400000);
+  const date=s=>s.toISOString().slice(0,10);
+  return kind==="date"
+    ? {days,start:date(start),end:date(end)}
+    : {days,start:start.toISOString(),end:end.toISOString()};
+}
+const num=v=>Number(v||0);
+const sum=(rows,fn)=>rows.reduce((a,r)=>a+num(fn(r)),0);
+const by=(rows,key,fn)=>{
+  const m={};
+  for(const r of rows){const k=String(key(r)??"Unknown");m[k]=(m[k]||0)+num(fn(r));}
+  return Object.entries(m).map(([name,value])=>({name,value})).sort((a,b)=>b.value-a.value);
+};
+const trend=(rows,dateFn,fn)=>{
+  const m={};
+  for(const r of rows){const d=dateFn(r);if(d)m[d]=(m[d]||0)+num(fn(r));}
+  return Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0])).map(([date,value])=>({date,value}));
+};
+
+async function inventory(env){
+  const {token,account}=envConfig(env);
+  const jobs={
+    zones:rest("/zones?per_page=100",token),
+    workers:rest(`/accounts/${account}/workers/scripts?per_page=100`,token),
+    d1:rest(`/accounts/${account}/d1/database?per_page=100`,token),
+    kv:rest(`/accounts/${account}/storage/kv/namespaces?per_page=100`,token),
+    r2:rest(`/accounts/${account}/r2/buckets?per_page=100`,token),
+    durableObjects:rest(`/accounts/${account}/workers/durable_objects/namespaces?per_page=100`,token),
+    queues:rest(`/accounts/${account}/queues?per_page=100`,token).catch(()=>[]),
+    workflows:rest(`/accounts/${account}/workflows?per_page=100`,token).catch(()=>[])
+  };
+  const out={},warnings=[];
+  for(const [k,p] of Object.entries(jobs)){
+    try{out[k]=arr(await p)}catch(e){out[k]=[];warnings.push({module:k,error:e.message})}
+  }
+  return {
+    counts:Object.fromEntries(Object.entries(out).map(([k,v])=>[k,v.length])),
+    warnings,
+    resources:{
+      zones:out.zones.map(x=>({id:x.id,name:x.name,status:x.status,plan:x.plan?.name||""})),
+      workers:out.workers.map(x=>({id:x.id,name:x.id,created:x.created_on,modified:x.modified_on})),
+      d1:out.d1.map(x=>({id:x.uuid,name:x.name,size:x.file_size||0})),
+      kv:out.kv.map(x=>({id:x.id,name:x.title})),
+      r2:out.r2.map(x=>({name:x.name,created:x.creation_date})),
+      durableObjects:out.durableObjects.map(x=>({id:x.id,name:x.name,script:x.script})),
+      queues:out.queues.map(x=>({id:x.queue_id||x.id,name:x.queue_name||x.name})),
+      workflows:out.workflows.map(x=>({id:x.id,name:x.name}))
+    }
+  };
+}
+
+async function workers(env,url){
+  const {token,account}=envConfig(env),r=range(url);
+  const q=`query($a:String!,$s:String!,$e:String!){
+    viewer{accounts(filter:{accountTag:$a}){
+      workersInvocationsAdaptive(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
+        sum{requests errors subrequests}
+        quantiles{cpuTimeP50 cpuTimeP99}
+        dimensions{datetime scriptName status}
+      }
+    }}}`;
+  const rows=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]?.workersInvocationsAdaptive||[];
+  return {days:r.days,requests:sum(rows,x=>x.sum?.requests),errors:sum(rows,x=>x.sum?.errors),
+    subrequests:sum(rows,x=>x.sum?.subrequests),cpuP50:rows.length?rows.reduce((a,x)=>a+num(x.quantiles?.cpuTimeP50),0)/rows.length:0,
+    cpuP99:rows.length?rows.reduce((a,x)=>a+num(x.quantiles?.cpuTimeP99),0)/rows.length:0,
+    trend:trend(rows,x=>x.dimensions?.datetime?.slice(0,13),x=>x.sum?.requests),
+    errorsTrend:trend(rows,x=>x.dimensions?.datetime?.slice(0,13),x=>x.sum?.errors),
+    scripts:by(rows,x=>x.dimensions?.scriptName,x=>x.sum?.requests),
+    statuses:by(rows,x=>x.dimensions?.status,x=>x.sum?.requests)};
+}
+
+async function d1(env,url){
+  const {token,account}=envConfig(env),r=range(url,"date");
+  const q=`query($a:String!,$s:Date!,$e:Date!){
+    viewer{accounts(filter:{accountTag:$a}){
+      d1AnalyticsAdaptiveGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
+        sum{readQueries writeQueries rowsRead rowsWritten queryBatchResponseBytes queryBatchTimeMs databaseSizeBytes}
+        quantiles{queryBatchTimeMsP50 queryBatchTimeMsP90 queryBatchTimeMsP99}
+        dimensions{date databaseId}
+      }
+    }}}`;
+  const rows=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]?.d1AnalyticsAdaptiveGroups||[];
+  return {days:r.days,readQueries:sum(rows,x=>x.sum?.readQueries),writeQueries:sum(rows,x=>x.sum?.writeQueries),
+    rowsRead:sum(rows,x=>x.sum?.rowsRead),rowsWritten:sum(rows,x=>x.sum?.rowsWritten),
+    responseBytes:sum(rows,x=>x.sum?.queryBatchResponseBytes),latency:sum(rows,x=>x.sum?.queryBatchTimeMs),
+    storage:Math.max(0,...rows.map(x=>num(x.sum?.databaseSizeBytes))),
+    p50:rows.length?rows.reduce((a,x)=>a+num(x.quantiles?.queryBatchTimeMsP50),0)/rows.length:0,
+    p90:rows.length?rows.reduce((a,x)=>a+num(x.quantiles?.queryBatchTimeMsP90),0)/rows.length:0,
+    p99:rows.length?rows.reduce((a,x)=>a+num(x.quantiles?.queryBatchTimeMsP99),0)/rows.length:0,
+    readTrend:trend(rows,x=>x.dimensions?.date,x=>x.sum?.rowsRead),writeTrend:trend(rows,x=>x.dimensions?.date,x=>x.sum?.rowsWritten),
+    databases:by(rows,x=>x.dimensions?.databaseId,x=>x.sum?.rowsRead)};
+}
+
+async function kv(env,url){
+  const {token,account}=envConfig(env),r=range(url,"date");
+  const q=`query($a:String!,$s:Date!,$e:Date!){
+    viewer{accounts(filter:{accountTag:$a}){
+      kvOperationsAdaptiveGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
+        sum{requests} dimensions{date actionType namespaceId}
+        quantiles{latencyMsP50 latencyMsP90 latencyMsP99}
+      }
+      kvStorageAdaptiveGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
+        max{keyCount byteCount} dimensions{date namespaceId}
+      }
+    }}}`;
+  const a=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
+  const ops=a.kvOperationsAdaptiveGroups||[],st=a.kvStorageAdaptiveGroups||[];
+  return {days:r.days,operations:sum(ops,x=>x.sum?.requests),reads:sum(ops,x=>x.dimensions?.actionType==="read"?x.sum?.requests:0),
+    writes:sum(ops,x=>x.dimensions?.actionType==="write"?x.sum?.requests:0),
+    deletes:sum(ops,x=>x.dimensions?.actionType==="delete"?x.sum?.requests:0),
+    lists:sum(ops,x=>x.dimensions?.actionType==="list"?x.sum?.requests:0),
+    storage:Math.max(0,...st.map(x=>num(x.max?.byteCount))),keys:Math.max(0,...st.map(x=>num(x.max?.keyCount))),
+    trend:trend(ops,x=>x.dimensions?.date,x=>x.sum?.requests),actions:by(ops,x=>x.dimensions?.actionType,x=>x.sum?.requests),
+    namespaces:by(ops,x=>x.dimensions?.namespaceId,x=>x.sum?.requests)};
+}
+
+async function r2(env,url){
+  const {token,account}=envConfig(env),r=range(url);
+  const q=`query($a:String!,$s:Time!,$e:Time!){
+    viewer{accounts(filter:{accountTag:$a}){
+      r2OperationsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
+        sum{requests} dimensions{datetime actionType actionStatus bucketName responseStatusCode}
+      }
+      r2StorageAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
+        max{objectCount uploadCount payloadSize metadataSize} dimensions{datetime bucketName}
+      }
+    }}}`;
+  const a=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
+  const ops=a.r2OperationsAdaptiveGroups||[],st=a.r2StorageAdaptiveGroups||[];
+  return {days:r.days,operations:sum(ops,x=>x.sum?.requests),storage:Math.max(0,...st.map(x=>num(x.max?.payloadSize))),
+    metadata:Math.max(0,...st.map(x=>num(x.max?.metadataSize))),objects:Math.max(0,...st.map(x=>num(x.max?.objectCount))),
+    uploads:Math.max(0,...st.map(x=>num(x.max?.uploadCount))),
+    trend:trend(ops,x=>x.dimensions?.datetime?.slice(0,10),x=>x.sum?.requests),
+    actions:by(ops,x=>x.dimensions?.actionType,x=>x.sum?.requests),
+    statuses:by(ops,x=>x.dimensions?.responseStatusCode,x=>x.sum?.requests),
+    buckets:by(ops,x=>x.dimensions?.bucketName,x=>x.sum?.requests)};
+}
+
+async function durableObjects(env,url){
+  const {token,account}=envConfig(env),r=range(url,"date");
+  const q=`query($a:String!,$s:Date!,$e:Date!){
+    viewer{accounts(filter:{accountTag:$a}){
+      durableObjectsInvocationsAdaptiveGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
+        sum{requests responseBodySize} dimensions{date namespaceName}
+      }
+      durableObjectsPeriodicGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
+        sum{cpuTime} quantiles{memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99} dimensions{date namespaceName}
+      }
+      durableObjectsStorageGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
+        max{storedBytes} dimensions{date namespaceName}
+      }
+      durableObjectsSubrequestsAdaptiveGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
+        sum{requests} dimensions{date namespaceName}
+      }
+    }}}`;
+  const a=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
+  const inv=a.durableObjectsInvocationsAdaptiveGroups||[],per=a.durableObjectsPeriodicGroups||[],st=a.durableObjectsStorageGroups||[],sub=a.durableObjectsSubrequestsAdaptiveGroups||[];
+  return {days:r.days,requests:sum(inv,x=>x.sum?.requests),responseBytes:sum(inv,x=>x.sum?.responseBodySize),
+    cpu:sum(per,x=>x.sum?.cpuTime),subrequests:sum(sub,x=>x.sum?.requests),storage:Math.max(0,...st.map(x=>num(x.max?.storedBytes))),
+    memoryP50:Math.max(0,...per.map(x=>num(x.quantiles?.memoryUsageBytesP50))),
+    memoryP99:Math.max(0,...per.map(x=>num(x.quantiles?.memoryUsageBytesP99))),
+    trend:trend(inv,x=>x.dimensions?.date,x=>x.sum?.requests),namespaces:by(inv,x=>x.dimensions?.namespaceName,x=>x.sum?.requests)};
+}
+
+async function zone(env,url){
+  const {token}=envConfig(env),zoneTag=url.searchParams.get("zone");
+  if(!zoneTag) throw new Error("缺少 zone 参数");
+  const r=range(url);
+  const q=`query($z:String!,$s:Time!,$e:Time!){
+    viewer{zones(filter:{zoneTag:$z}){
+      httpRequestsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
+        count sum{edgeResponseBytes visits} dimensions{datetimeHour clientCountryName clientBrowserFamily clientDeviceType edgeResponseStatus coloCode cacheStatus}
+      }
+      firewallEventsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
+        count dimensions{datetime action clientCountryName source}
+      }
+    }}}`;
+  const z=(await gql(q,{z:zoneTag,s:r.start,e:r.end},token)).viewer.zones?.[0]||{};
+  const h=z.httpRequestsAdaptiveGroups||[],fw=z.firewallEventsAdaptiveGroups||[];
+  return {days:r.days,requests:sum(h,x=>x.count),bytes:sum(h,x=>x.sum?.edgeResponseBytes),visits:sum(h,x=>x.sum?.visits),
+    cacheHits:sum(h,x=>x.dimensions?.cacheStatus==="hit"?x.count:0),
+    trend:trend(h,x=>x.dimensions?.datetimeHour,x=>x.count),trafficTrend:trend(h,x=>x.dimensions?.datetimeHour,x=>x.sum?.edgeResponseBytes),
+    countries:by(h,x=>x.dimensions?.clientCountryName,x=>x.count),browsers:by(h,x=>x.dimensions?.clientBrowserFamily,x=>x.count),
+    devices:by(h,x=>x.dimensions?.clientDeviceType,x=>x.count),statuses:by(h,x=>x.dimensions?.edgeResponseStatus,x=>x.count),
+    colos:by(h,x=>x.dimensions?.coloCode,x=>x.count),cache:by(h,x=>x.dimensions?.cacheStatus,x=>x.count),
+    threats:sum(fw,x=>x.count),threatActions:by(fw,x=>x.dimensions?.action,x=>x.count),
+    threatCountries:by(fw,x=>x.dimensions?.clientCountryName,x=>x.count),sources:by(fw,x=>x.dimensions?.source,x=>x.count)};
+}
+
+async function introspection(env){
+  const {token}=envConfig(env);
+  const q=`{__schema{queryType{fields{name}}}}`;
+  return (await gql(q,{},token)).__schema.queryType.fields.map(x=>x.name);
+}
+
+export async function onRequest({request,env}){
+  const u=new URL(request.url),p=u.pathname.replace(/^\/api\/?/,"");
+  try{
+    if(p==="config") return good({siteName:env.SITE_NAME||"Cloudflare Status"});
+    if(p==="inventory") return good(await inventory(env));
+    if(p==="workers") return good(await workers(env,u));
+    if(p==="d1") return good(await d1(env,u));
+    if(p==="kv") return good(await kv(env,u));
+    if(p==="r2") return good(await r2(env,u));
+    if(p==="do") return good(await durableObjects(env,u));
+    if(p==="zone") return good(await zone(env,u));
+    if(p==="schema") return good({fields:await introspection(env)});
+    return fail("API 不存在",404);
+  }catch(e){
+    return fail(e.message||String(e));
+  }
+}
