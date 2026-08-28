@@ -1,13 +1,1 @@
-{
-  "name": "cloudflare-status",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Cloudflare account analytics dashboard for Cloudflare Pages",
-  "scripts": {
-    "dev": "wrangler pages dev .",
-    "deploy": "wrangler pages deploy ."
-  },
-  "devDependencies": {
-    "wrangler": "^4.0.0"
-  }
-}
+{"name":"cf-status-v2","version":"2.0.0","private":true,"scripts":{"dev":"wrangler pages dev .","deploy":"wrangler pages deploy ."},"devDependencies":{"wrangler":"^4.0.0"}}

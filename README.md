@@ -1,48 +1,24 @@
-# Cloudflare Status
+# Cloudflare Status V2
 
-基于 Cloudflare Pages Functions 的账号级监控面板，页面风格参考 EdgeOne Status，但后端和指标体系按 Cloudflare API/GraphQL 重新实现。
+参考 `chendada00/edgeone-status` 的横向页签和卡片式 Dashboard，改为 Cloudflare 产品按需加载。
 
-## 已实现
+## 关键设计
+- 首屏只调用 `/api/inventory`，不查询全部 Analytics。
+- 进入 Workers/D1/KV/R2/DO/Workflows 才调用账号 GraphQL Analytics。
+- Zone 先选择域名，再调用 Zone Analytics。
+- 当前页数据缓存；点击刷新才重新请求。
+- GraphQL 按产品拆分，避免一个产品字段错误导致全部指标显示 0。
+- Zone 增加 Requests、Visits、Edge Response、国家、状态码、浏览器、设备、Colo、Firewall Action。
+- D1 增加 Rows Read/Written、Queries、Storage、Response、Latency。
+- Workers 增加 Requests、Errors、Error Rate、Subrequests、CPU、Wall Time。
+- KV/R2/DO/Workflows 分别提供趋势、排行、操作类型等图表。
 
-- Zone：HTTP Requests、Bytes、Cached Bytes、Threats、趋势图
-- Workers：Requests、Errors、Subrequests、CPU Time、趋势图
-- D1：Read/Write Queries、Rows Read/Written、Response Bytes、Query Latency、Storage
-- KV：Operations、Storage、操作饼图
-- 资源发现：Zones、Workers、D1、KV、R2、Durable Objects
-- Billable Usage：调用 Cloudflare 账户用量 API，接口不可用时不影响其它页面
-- 1/7/30 天切换、Zone 筛选、暗色模式、响应式页面
-- 所有 Cloudflare 密钥仅在服务端 Pages Functions 环境变量中使用
+## 部署到 Cloudflare Pages
+Framework preset: None；Build command 留空；Build output directory: `.`。
 
-## 部署
+环境变量：
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `SITE_NAME`（可选）
 
-1. 上传整个项目到 GitHub。
-2. Cloudflare Dashboard -> Workers & Pages -> Create -> Pages -> Connect to Git。
-3. Framework preset 选 None。
-4. Build command 留空。
-5. Build output directory 填 `.`。
-6. 在 Settings -> Environment variables 添加：
-   - `CLOUDFLARE_API_TOKEN`
-   - `CLOUDFLARE_ACCOUNT_ID`
-   - 可选 `SITE_NAME`
-   - 可选 `SITE_ICON`
-7. 重新部署。
-
-## API Token 权限
-
-按最小权限原则创建只读 Token。建议先添加：
-
-- Zone / Zone / Read
-- Account / Workers Scripts / Read
-- Account / D1 / Read
-- Account / Workers KV Storage / Read
-- Account / R2 / Read
-- Account / Durable Objects / Read
-- Account / Account Analytics / Read
-- Account / Billing / Read（如果账户/API 支持 Billable Usage）
-
-不同 Cloudflare 产品和 GraphQL 数据集的权限要求可能随 Cloudflare API 调整。某个数据集没有权限时，本项目会显示“部分指标未获取”，其它指标继续工作。
-
-## 重要说明
-
-Cloudflare GraphQL 数据集不是所有账户、所有套餐、所有产品都保证开放相同字段。本项目对每组指标独立降级处理。Billable Usage API 目前属于 Alpha/Restricted 体系，账户未开放时可能返回错误；这不是页面代码错误。
-
+GraphQL Analytics 是观测数据，不应直接等同于最终账单用量。Cloudflare 官方明确区分 Analytics 与 Billable Usage。
