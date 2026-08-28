@@ -1,37 +1,36 @@
-# Cloudflare Status — EdgeOne Status UI Edition
+# Cloudflare Monitor V6
 
-本版本按 `chendada00/edgeone-status` 的视觉体系重新设计：玻璃面板、Hero、横向 Tab、时间控制、Metric Card、Chart Card、主题切换。
+基于 Cloudflare GraphQL Analytics API 的 Cloudflare 监控面板，页面视觉参考 EdgeOne Status。
 
-## 重要修复
+## 本版修复
 
-- 所有 REST 资源统一做数组归一化，不再因为 Cloudflare 返回 object 而触发 `.map is not a function`。
-- 每个产品使用独立 GraphQL 请求：Workers / D1 / KV / R2 / Durable Objects / Zone。
-- 一个产品查询失败不会把其它产品全部变成 0。
-- 错误直接显示 Cloudflare 返回的错误，而不是伪装成 0。
-- 首页只读取资源清单。
-- Zone 只有选择具体域名后才读取 Zone Analytics。
-- 1/7/14/30 天切换；KV、D1、R2 等官方 Analytics 当前保留周期以 Cloudflare 文档为准。
-- R2 使用 `objectCount / uploadCount / payloadSize / metadataSize`。
-- KV 使用 `keyCount / byteCount`。
-- Durable Objects 增加 Memory P50/P99。
+- Durable Objects 不再请求当前账户 Schema 中不存在的 `namespaceId` 输出字段。
+- Workflows 不再请求当前账户 Schema 中不存在的 `stepName` 输出字段；改用官方可用的 Workflow / Event Type 数据。
+- Queues 使用当前官方的 `queuesBacklogAdaptiveGroups` 和 `queueID`。
+- Workers 增加 Memory P50/P90/P99 与 Memory 趋势。
+- Durable Objects 增加 Memory P50/P90/P99 趋势。
+- 默认时间范围为 1 天。
+- 刷新按钮移动到横向页签右侧。
+- 页签和内容先显示骨架框架，再异步填充数据。
+- 删除页面上的“懒加载”等开发实现说明。
+- 删除 Metric / Chart 卡片顶部彩色装饰条。
+- 使用系统中文字体，降低标题、数字和深色模式字体粗细。
+- ECharts 字体和坐标轴字号降低，减少视觉拥挤。
+
+## Cloudflare GraphQL
+
+Cloudflare GraphQL Analytics Schema 是动态的。不同账户、Zone、套餐可能暴露不同 Dataset / Field；项目应优先以实际账户 Introspection / Settings 为准。
 
 ## 部署
 
-Cloudflare Pages 连接 GitHub：
+Cloudflare Pages：
 
 - Framework preset: None
 - Build command: 留空
 - Build output directory: `.`
-- Functions 自动识别 `/functions`。
 
 环境变量：
 
-`CLOUDFLARE_API_TOKEN`
-`CLOUDFLARE_ACCOUNT_ID`
-`SITE_NAME`（可选）
-
-建议 API Token 使用最小必要权限。
-
-## 说明
-
-Cloudflare GraphQL Analytics 是观测数据，不应直接当成最终账单。免费额度/计费页面建议使用 Cloudflare Billable Usage 的专用接口或控制台口径。
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `SITE_NAME`（可选）
