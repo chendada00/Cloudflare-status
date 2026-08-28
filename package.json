@@ -1,7 +1,7 @@
 {
-  "name": "cloudflare-status-edge-ui",
-  "version": "3.0.0",
+  "name": "cloudflare-status-v4",
   "private": true,
+  "version": "4.0.0",
   "scripts": {
     "dev": "wrangler pages dev .",
     "deploy": "wrangler pages deploy ."
