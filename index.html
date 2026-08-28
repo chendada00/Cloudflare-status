@@ -1,179 +1,65 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cloudflare Analytics</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<style>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cloudflare Monitor</title><script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script><style>
 @import url('https://fastly.jsdelivr.net/npm/cn-fontsource-ding-talk-jin-bu-ti-regular/font.css');
-html,body{font-family:"DingTalk JinBuTi",Roboto,sans-serif!important}
-:root{--text:#0f172a;--muted:#64748b;--line:rgba(226,232,240,.86);--card:rgba(255,255,255,.94)}
-*{box-sizing:border-box}body{color:var(--text);background:radial-gradient(circle at 8% 0%,rgba(125,211,252,.28),transparent 26%),radial-gradient(circle at 88% 8%,rgba(196,181,253,.18),transparent 28%),linear-gradient(180deg,#f8fbff 0%,#f6f8fb 45%,#eef4ff 100%);min-height:100vh}
-.app-shell{background:rgba(255,255,255,.56);border:1px solid rgba(226,232,240,.78);box-shadow:0 24px 80px -52px rgba(15,23,42,.32);backdrop-filter:blur(20px)}
-.glass-panel{background:rgba(255,255,255,.72);backdrop-filter:blur(18px);border:1px solid var(--line);box-shadow:0 18px 52px -42px rgba(15,23,42,.35)}
-.hero-grid{background-image:linear-gradient(rgba(148,163,184,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.07) 1px,transparent 1px);background-size:26px 26px}
-.section-block{border:1px solid rgba(226,232,240,.76);background:rgba(255,255,255,.44);box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
-.section-title{position:relative;padding-left:1rem}.section-title:before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:5px;height:1.25rem;background:linear-gradient(180deg,#38bdf8,#2563eb);border-radius:999px}
-.metric-card,.chart-card{position:relative;overflow:hidden;border:1px solid rgba(226,232,240,.9);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,252,.92));box-shadow:0 18px 44px -36px rgba(15,23,42,.34);transition:.22s}
-.metric-card:hover,.chart-card:hover{transform:translateY(-2px);border-color:rgba(56,189,248,.42);box-shadow:0 28px 70px -48px rgba(15,23,42,.45)}
-.chart-card:before{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(56,189,248,.5),transparent)}
-.dashboard-tabs{position:sticky;top:.75rem;z-index:30;overflow-x:auto;scrollbar-width:none;background:rgba(255,255,255,.82);border:1px solid rgba(226,232,240,.9);backdrop-filter:blur(18px);padding:.45rem;border-radius:1.15rem;box-shadow:0 16px 40px -30px rgba(15,23,42,.45)}
-.dashboard-tabs::-webkit-scrollbar{display:none}.dashboard-tab{display:inline-flex;align-items:center;gap:.48rem;white-space:nowrap;border:1px solid transparent;border-radius:.85rem;padding:.58rem .82rem;font-size:.82rem;font-weight:650;color:#64748b;transition:.22s;cursor:pointer;background:transparent}.dashboard-tab:hover{color:#0f172a;background:rgba(248,250,252,.95);transform:translateY(-1px)}.dashboard-tab.is-active{color:#0f172a;background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(240,249,255,.96));border-color:rgba(125,211,252,.48);box-shadow:0 10px 26px -20px rgba(14,165,233,.75),inset 0 0 0 1px rgba(255,255,255,.75)}
-.tab-dot{width:.42rem;height:.42rem;border-radius:999px;background:#cbd5e1}.dashboard-tab.is-active .tab-dot{background:#0ea5e9;box-shadow:0 0 0 4px rgba(14,165,233,.1)}
-.dashboard-panel{display:none;animation:in .28s ease both}.dashboard-panel.is-active{display:block}@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.control-card{border:1px solid rgba(226,232,240,.9);background:rgba(255,255,255,.86);box-shadow:0 16px 38px -34px rgba(15,23,42,.3)}
-.time-range-btn{height:2.25rem;border-radius:.75rem;border:1px solid #e2e8f0;background:rgba(255,255,255,.9);padding:0 .9rem;font-size:.875rem;font-weight:600;color:#475569}.time-range-btn.is-active{border-color:#0f172a;color:#fff;background:#0f172a}
-.select{height:2.45rem;width:100%;border:1px solid #e2e8f0;border-radius:.85rem;background:#fff;padding:0 .85rem;font-size:.875rem;font-weight:600;color:#334155}
-.group-state{display:inline-flex;align-items:center;gap:.5rem;padding:.48rem .72rem;border-radius:.8rem;background:rgba(248,250,252,.78);color:#64748b;font-size:.74rem;font-weight:650}.state-dot{width:.45rem;height:.45rem;border-radius:999px;background:#94a3b8}.group-state.loading .state-dot{background:#0ea5e9;animation:pulse 1s infinite}.group-state.loaded .state-dot{background:#22c55e}.group-state.error .state-dot{background:#ef4444}@keyframes pulse{50%{opacity:.35;transform:scale(.72)}}
-.loading{padding:55px;text-align:center;color:#94a3b8}.error-box{padding:14px 16px;border-radius:16px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;font-size:13px;white-space:pre-wrap}
-.chart{height:330px;width:100%}.small-chart{height:300px;width:100%}.resource-count{font-size:2rem;font-weight:800}.tag{display:inline-flex;align-items:center;padding:.45rem .65rem;border-radius:.75rem;background:#f0f9ff;color:#0369a1;font-size:.75rem;font-weight:650}
-.theme{position:fixed;right:18px;bottom:18px;z-index:100;height:46px;padding:0 16px;border-radius:999px;border:1px solid #e2e8f0;background:rgba(255,255,255,.9);font-weight:700}
-html.dark{color-scheme:dark}html.dark body{color:#e5edf9;background:radial-gradient(circle at 8% 0%,rgba(14,165,233,.2),transparent 30%),radial-gradient(circle at 88% 8%,rgba(99,102,241,.18),transparent 30%),linear-gradient(180deg,#07111f,#0b1220 46%,#0f172a)}
-html.dark .app-shell{background:rgba(15,23,42,.58);border-color:rgba(71,85,105,.46)}html.dark .glass-panel,html.dark .control-card{background:rgba(15,23,42,.78);border-color:rgba(71,85,105,.52)}html.dark .metric-card,html.dark .chart-card{background:linear-gradient(180deg,rgba(30,41,59,.96),rgba(15,23,42,.92));border-color:rgba(71,85,105,.62)}html.dark .section-block{background:rgba(15,23,42,.38);border-color:rgba(71,85,105,.48)}html.dark .dashboard-tabs{background:rgba(15,23,42,.88);border-color:rgba(71,85,105,.62)}html.dark .dashboard-tab{color:#94a3b8}html.dark .dashboard-tab:hover{color:#e2e8f0;background:rgba(51,65,85,.58)}html.dark .dashboard-tab.is-active{color:#f8fafc;background:linear-gradient(135deg,rgba(30,41,59,.98),rgba(8,47,73,.72));border-color:rgba(56,189,248,.42)}html.dark .time-range-btn,html.dark .select{background:rgba(15,23,42,.9);border-color:rgba(71,85,105,.72);color:#e2e8f0}html.dark .time-range-btn.is-active{background:linear-gradient(135deg,#7dd3fc,#a5b4fc);color:#082f49;border-color:#7dd3fc}html.dark .tag{background:rgba(8,47,73,.56);color:#bae6fd}html.dark .theme{background:rgba(15,23,42,.9);border-color:#475569;color:#e2e8f0}html.dark .error-box{background:#3b1515;border-color:#7f1d1d;color:#fecaca}
-@media(max-width:640px){.app-shell{border-radius:0;margin:0!important}.dashboard-tabs{top:.4rem}.theme{right:12px;bottom:12px}.chart{height:280px}}
-</style>
-</head>
-<body class="min-h-screen px-3 py-4 sm:px-5 lg:px-7">
-<div class="app-shell max-w-7xl mx-auto space-y-5 rounded-[28px] p-3 sm:p-5 lg:p-6">
-  <div class="glass-panel rounded-[24px] px-4 py-4 sm:px-5">
-    <div class="flex flex-col gap-4">
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div class="flex items-center gap-4">
-          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 shadow-lg">
-            <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13h4l3-9 4 16 3-7h4"/></svg>
-          </div>
-          <div><p class="text-xs font-semibold uppercase tracking-[.28em] text-sky-600">Cloudflare Analytics</p><h1 id="page-title" class="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Cloudflare 监控</h1><p class="mt-1 max-w-2xl text-sm leading-6 text-slate-500">资源、请求、存储、运行时与安全数据分析。</p></div>
-        </div>
-        <button id="refresh" class="rounded-xl bg-white/80 px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-slate-200">↻ 刷新当前页签</button>
-      </div>
-      <div class="hero-grid relative overflow-hidden rounded-[22px] border border-white/70 bg-gradient-to-br from-white via-sky-50/75 to-indigo-50/70 px-5 py-5">
-        <div class="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-center">
-          <div><h2 class="text-xl font-medium leading-tight text-slate-700 sm:text-2xl">Cloudflare 资源数据总览</h2><p class="mt-2 max-w-3xl text-sm leading-7 text-slate-600">按照产品独立加载 Analytics。切换页签后才请求对应产品数据，避免打开页面一次性查询全部指标。</p></div>
-          <div class="grid grid-cols-3 gap-2 rounded-2xl border border-white/80 bg-white/78 p-3 shadow-sm">
-            <div class="rounded-xl border border-slate-200/90 bg-slate-50/90 p-3 text-center"><p class="text-[11px] uppercase tracking-[.18em] text-slate-400">产品</p><p id="hero-products" class="mt-1 text-base font-semibold">7</p></div>
-            <div class="rounded-xl border border-slate-200/90 bg-slate-50/90 p-3 text-center"><p class="text-[11px] uppercase tracking-[.18em] text-slate-400">时间</p><p id="hero-days" class="mt-1 text-base font-semibold">7天</p></div>
-            <div class="rounded-xl border border-sky-200/90 bg-sky-50/90 p-3 text-center"><p class="text-[11px] uppercase tracking-[.18em] text-slate-400">模式</p><p class="mt-1 text-base font-semibold">懒加载</p></div>
-          </div>
-        </div>
-      </div>
-      <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_260px]">
-        <div class="control-card rounded-2xl p-4"><label class="mb-3 block text-xs font-semibold uppercase tracking-[.25em] text-slate-400">时间范围</label><div class="flex flex-wrap gap-2" id="ranges">
-          <button class="time-range-btn" data-days="1">1天</button><button class="time-range-btn is-active" data-days="7">7天</button><button class="time-range-btn" data-days="14">14天</button><button class="time-range-btn" data-days="30">30天</button>
-        </div></div>
-        <div class="control-card rounded-2xl p-4"><label class="mb-3 block text-xs font-semibold uppercase tracking-[.25em] text-slate-400">Zone</label><select id="zone" class="select"><option value="">加载中...</option></select></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="space-y-4 pt-1">
-    <div class="dashboard-tabs"><div class="flex min-w-max items-center gap-1" id="tabs">
-      <button class="dashboard-tab is-active" data-tab="overview"><span class="tab-dot"></span>概览</button>
-      <button class="dashboard-tab" data-tab="zone"><span class="tab-dot"></span>网站 / Zone</button>
-      <button class="dashboard-tab" data-tab="workers"><span class="tab-dot"></span>Workers</button>
-      <button class="dashboard-tab" data-tab="d1"><span class="tab-dot"></span>D1</button>
-      <button class="dashboard-tab" data-tab="kv"><span class="tab-dot"></span>KV</button>
-      <button class="dashboard-tab" data-tab="r2"><span class="tab-dot"></span>R2</button>
-      <button class="dashboard-tab" data-tab="do"><span class="tab-dot"></span>Durable Objects</button>
-    </div></div>
-    <div class="flex flex-wrap items-center justify-between gap-3 px-1"><div><p id="caption" class="text-sm font-semibold text-slate-700">资源概览</p><p id="description" class="mt-1 text-xs text-slate-400">首页只读取资源清单，不读取历史 Analytics。</p></div><div id="state" class="group-state"><span class="state-dot"></span><span>等待加载</span></div></div>
-    <div id="content"></div>
-  </div>
-  <div class="glass-panel footer-panel rounded-[22px] px-5 py-5 text-center text-xs text-slate-400">Cloudflare Analytics Dashboard · GraphQL Analytics API · 每个产品独立懒加载</div>
-</div>
-<button id="theme" class="theme">☾ 深色模式</button>
-
+:root{--text:#101828;--muted:#667085;--line:#e4e7ec;--card:#fff;--panel:rgba(255,255,255,.78);--blue:#2563eb;--cyan:#06b6d4;--purple:#7c3aed;--pink:#ec4899;--green:#10b981;--orange:#f59e0b;--red:#ef4444}
+*{box-sizing:border-box}html,body{margin:0;font-family:"DingTalk JinBuTi",Roboto,system-ui,sans-serif!important;color:var(--text)}body{min-height:100vh;background:radial-gradient(circle at 7% 0%,rgba(56,189,248,.24),transparent 25%),radial-gradient(circle at 90% 3%,rgba(167,139,250,.22),transparent 26%),radial-gradient(circle at 55% 100%,rgba(236,72,153,.10),transparent 30%),linear-gradient(180deg,#f8fbff 0%,#f8fafc 52%,#eef4ff 100%)}
+.app{max-width:1500px;margin:18px auto;padding:14px;background:rgba(255,255,255,.48);border:1px solid rgba(255,255,255,.85);border-radius:30px;box-shadow:0 30px 90px -55px rgba(15,23,42,.45);backdrop-filter:blur(22px)}
+.panel{background:var(--panel);border:1px solid var(--line);box-shadow:0 18px 50px -42px rgba(15,23,42,.35);backdrop-filter:blur(18px)}
+.hero{overflow:hidden;position:relative;padding:28px;border-radius:26px;background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(239,246,255,.85) 42%,rgba(250,245,255,.88));border:1px solid rgba(255,255,255,.9)}
+.hero:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(99,102,241,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(6,182,212,.06) 1px,transparent 1px);background-size:26px 26px;pointer-events:none}.hero>*{position:relative}
+.logo{width:48px;height:48px;border-radius:17px;background:linear-gradient(135deg,#0f172a,#334155);display:grid;place-items:center;color:#fff;box-shadow:0 12px 30px -15px #0f172a}.logo svg{width:24px}
+.tabs{position:sticky;top:10px;z-index:50;display:flex;gap:5px;overflow:auto;padding:7px;border-radius:19px;background:rgba(255,255,255,.86);border:1px solid var(--line);box-shadow:0 18px 45px -35px rgba(15,23,42,.55);backdrop-filter:blur(20px);scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{flex:0 0 auto;border:0;border-radius:13px;padding:12px 16px;background:transparent;color:#667085;font-weight:800;cursor:pointer;transition:.2s}.tab:hover{background:#f8fafc;color:#111827;transform:translateY(-1px)}.tab.active{color:#fff;background:linear-gradient(135deg,#111827,#334155);box-shadow:0 12px 28px -18px #111827}
+.controls{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-radius:18px}.ranges{display:flex;gap:5px}.range{height:38px;padding:0 14px;border:1px solid var(--line);background:var(--card);border-radius:12px;color:#667085;font-weight:800;cursor:pointer}.range.active{background:#111827;color:#fff;border-color:#111827}.select{height:40px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:0 13px;font-weight:700;color:#344054;min-width:220px}
+.section{position:relative;padding-left:16px;margin:0 0 14px;font-size:19px;font-weight:900}.section:before{content:"";position:absolute;left:0;top:50%;width:5px;height:23px;transform:translateY(-50%);border-radius:99px;background:linear-gradient(180deg,#06b6d4,#6366f1,#ec4899)}
+.metric{position:relative;overflow:hidden;padding:18px;border:1px solid var(--line);border-radius:21px;background:linear-gradient(180deg,#fff,rgba(248,250,252,.92));box-shadow:0 18px 46px -40px rgba(15,23,42,.5);transition:.22s}.metric:after{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#06b6d4,#6366f1,#ec4899)}.metric:hover{transform:translateY(-2px);box-shadow:0 28px 65px -45px rgba(79,70,229,.55)}.metric .label{font-size:12px;color:#667085;font-weight:800}.metric .value{font-size:30px;font-weight:950;letter-spacing:-.04em;margin-top:6px}.metric .sub{font-size:12px;color:#98a2b3;margin-top:6px}
+.chart-card{position:relative;overflow:hidden;min-height:380px;padding:18px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,252,.94));box-shadow:0 18px 50px -42px rgba(15,23,42,.42)}.chart-card:before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,#06b6d4,#6366f1,#ec4899,#f59e0b)}.chart{height:325px}.empty{height:325px;display:grid;place-items:center;color:#98a2b3}.error{padding:16px;border-radius:18px;border:1px solid #fecaca;background:#fff1f2;color:#b42318;white-space:pre-wrap;font-size:13px}.skeleton{position:relative;overflow:hidden;background:linear-gradient(90deg,#eef2f6 25%,#f8fafc 50%,#eef2f6 75%);background-size:200% 100%;animation:shine 1.25s infinite}@keyframes shine{to{background-position:-200% 0}}.sk-card{height:110px;border-radius:21px}.sk-chart{height:380px;border-radius:22px}.footer-action{display:flex;justify-content:center;margin:18px 0 2px}.refresh{border:1px solid var(--line);background:#fff;border-radius:14px;padding:11px 18px;font-weight:850;color:#344054;cursor:pointer;box-shadow:0 10px 28px -24px #111827}.refresh:hover{transform:translateY(-1px);border-color:#93c5fd}.state{font-size:12px;color:#98a2b3}.theme{position:fixed;right:18px;bottom:18px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:11px 16px;font-weight:800;box-shadow:0 18px 45px -30px #111827;z-index:80}
+html.dark{color-scheme:dark}html.dark body{color:#e5e7eb;background:radial-gradient(circle at 7% 0%,rgba(6,182,212,.18),transparent 28%),radial-gradient(circle at 90% 3%,rgba(124,58,237,.2),transparent 28%),linear-gradient(180deg,#07111f,#0b1220 55%,#111827)}html.dark .app{background:rgba(15,23,42,.55);border-color:#243247}html.dark .panel,html.dark .tabs{background:rgba(15,23,42,.78);border-color:#29384d}html.dark .hero{background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(8,47,73,.72),rgba(49,46,129,.45));border-color:#29384d}html.dark .tab{color:#94a3b8}html.dark .tab:hover{background:#1e293b;color:#e5e7eb}html.dark .tab.active{background:linear-gradient(135deg,#f8fafc,#cbd5e1);color:#0f172a}html.dark .range,html.dark .select,html.dark .refresh,html.dark .theme{background:#0f172a;color:#e5e7eb;border-color:#334155}html.dark .range.active{background:linear-gradient(135deg,#38bdf8,#818cf8);color:#082f49;border-color:#38bdf8}html.dark .metric,html.dark .chart-card{background:linear-gradient(180deg,rgba(30,41,59,.96),rgba(15,23,42,.94));border-color:#334155}html.dark .skeleton{background:linear-gradient(90deg,#1e293b 25%,#334155 50%,#1e293b 75%);background-size:200% 100%}html.dark .error{background:#3b1515;border-color:#7f1d1d;color:#fecaca}
+@media(max-width:640px){.app{margin:0;padding:9px;border-radius:0}.hero{padding:20px}.chart{height:285px}.chart-card{min-height:340px}.select{width:100%}.theme{right:10px;bottom:10px}}
+</style></head><body><div class="app space-y-4">
+<section class="hero"><div class="flex items-center gap-4"><div class="logo"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><div><div class="text-xs font-black tracking-[.24em] text-cyan-600">CLOUDFLARE MONITOR</div><h1 id="title" class="mt-1 text-3xl md:text-4xl font-black tracking-tight">Cloudflare 监控</h1><p class="mt-1 text-sm text-slate-500">资源、流量、运行时、存储、安全与消息服务监控</p></div></div></section>
+<nav class="tabs" id="tabs"><button class="tab active" data-tab="overview">概览</button><button class="tab" data-tab="zone">网站 / Zone</button><button class="tab" data-tab="workers">Workers</button><button class="tab" data-tab="d1">D1</button><button class="tab" data-tab="kv">KV</button><button class="tab" data-tab="r2">R2</button><button class="tab" data-tab="do">Durable Objects</button><button class="tab" data-tab="queues">Queues</button><button class="tab" data-tab="workflows">Workflows</button></nav>
+<div class="panel controls"><div class="ranges" id="ranges"><button class="range active" data-days="1">1天</button><button class="range" data-days="7">7天</button><button class="range" data-days="14">14天</button><button class="range" data-days="30">30天</button></div><div id="zoneBox" class="hidden"><select id="zone" class="select"></select></div><div id="state" class="state">准备就绪</div></div>
+<main id="content"></main><div class="footer-action"><button id="refresh" class="refresh">↻ 刷新当前页</button></div><div class="text-center text-xs text-slate-400 pb-2">Cloudflare Monitor · 数据按页签懒加载</div></div><button id="theme" class="theme">☾ 深色</button>
 <script>
-const TABS={overview:"概览",zone:"网站 / Zone",workers:"Workers",d1:"D1",kv:"KV",r2:"R2",do:"Durable Objects"};
-const S={tab:localStorage.getItem("cf-tab")||"overview",days:+(localStorage.getItem("cf-days")||7),inv:null,cache:{},charts:[]};
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const T={overview:"概览",zone:"网站 / Zone",workers:"Workers",d1:"D1",kv:"KV",r2:"R2",do:"Durable Objects",queues:"Queues",workflows:"Workflows"};
+const S={tab:localStorage.getItem("cf-tab")||"overview",days:Number(localStorage.getItem("cf-days")||1),inv:null,cache:{},charts:[]};
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const C=["#6366f1","#06b6d4","#10b981","#f59e0b","#ef4444","#ec4899","#8b5cf6","#14b8a6","#f97316","#0ea5e9"];
 const fmt=n=>new Intl.NumberFormat("zh-CN",{maximumFractionDigits:2}).format(Number(n||0));
 const bytes=n=>{n=Number(n||0);const u=["B","KB","MB","GB","TB","PB"];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return fmt(n)+" "+u[i]};
 const pct=(a,b)=>b?((a/b)*100).toFixed(2)+"%":"0%";
-async function api(p){const r=await fetch(p,{cache:"no-store"});const d=await r.json().catch(()=>({}));if(!r.ok||!d.success)throw new Error(d.error||"请求失败");return d.data}
-function setState(type,text){const e=$("#state");e.className="group-state "+type;e.innerHTML=`<span class="state-dot"></span><span>${text}</span>`}
-function section(t,sub=""){return `<div class="flex items-end justify-between mb-3"><div><h2 class="text-lg font-bold text-slate-800 section-title">${t}</h2>${sub?`<p class="mt-1 ml-4 text-xs text-slate-400">${sub}</p>`:""}</div></div>`}
-function metrics(items){return `<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">${items.map(x=>`<div class="metric-card rounded-[22px]"><div class="p-5"><p class="text-sm font-medium text-slate-500">${x[0]}</p><p class="text-2xl font-bold text-slate-900 mt-1">${x[1]}</p><p class="text-xs text-slate-400 mt-3">${x[2]||""}</p></div></div>`).join("")}</div>`}
-function chart(id,opt){requestAnimationFrame(()=>{const e=document.getElementById(id);if(!e)return;const c=echarts.init(e);S.charts.push(c);c.setOption(opt)})}
-function line(rows,name="请求"){rows=Array.isArray(rows)?rows:[];return {tooltip:{trigger:"axis"},grid:{left:50,right:24,bottom:55},xAxis:{type:"category",data:rows.map(x=>String(x.date||"").replace("T"," ").slice(0,16))},yAxis:{type:"value"},series:[{name,type:"line",smooth:true,areaStyle:{opacity:.12},data:rows.map(x=>x.value||0)}]}}
-function multiLine(a,b){a=a||[];b=b||[];return {tooltip:{trigger:"axis"},grid:{left:50,right:24,bottom:55},xAxis:{type:"category",data:a.map(x=>x.date)},yAxis:{type:"value"},series:[{name:"Rows Read",type:"line",smooth:true,data:a.map(x=>x.value||0)},{name:"Rows Written",type:"line",smooth:true,data:b.map(x=>x.value||0)}]}}
-function bars(rows){rows=Array.isArray(rows)?rows.slice(0,20):[];return {tooltip:{trigger:"axis"},grid:{left:50,right:24,bottom:70},xAxis:{type:"category",data:rows.map(x=>String(x.name)),axisLabel:{rotate:30}},yAxis:{type:"value"},series:[{type:"bar",barMaxWidth:30,data:rows.map(x=>x.value||0)}]}}
-function pie(rows){rows=Array.isArray(rows)?rows:[];return {tooltip:{trigger:"item"},series:[{type:"pie",radius:["38%","70%"],data:rows.map(x=>({name:x.name,value:x.value}))}]}}
+async function api(p){const r=await fetch(p,{cache:"no-store"});const d=await r.json().catch(()=>({}));if(!r.ok||!d.success)throw Error(d.error||"请求失败");return d.data}
+function state(t){$("#state").textContent=t}
 function clearCharts(){S.charts.forEach(c=>c.dispose());S.charts=[]}
-async function loadInventory(){
- if(S.inv)return S.inv;
- S.inv=await api("/api/inventory");
- const z=S.inv.resources?.zones||[];$("#zone").innerHTML=z.map(x=>`<option value="${x.id}">${x.name}</option>`).join("")||`<option value="">无 Zone</option>`;
- return S.inv
-}
-function renderError(e){$("#content").innerHTML=`<div class="error-box"><b>本模块请求失败</b>\n${e.message}\n\n这次不会把失败伪装成 0。请打开浏览器 Network 查看对应 /api 请求。</div>`}
-async function render(){
- clearCharts();$("#content").innerHTML=`<div class="metric-card rounded-[22px] loading">正在加载 ${TABS[S.tab]}…</div>`;setState("loading","正在请求");
- $("#caption").textContent=TABS[S.tab];$("#hero-days").textContent=S.days+"天";
- try{if(S.tab==="overview")await overview();else if(S.tab==="zone")await zone();else await product(S.tab);setState("loaded","当前页已加载")}catch(e){setState("error","加载失败");renderError(e)}}
-async function overview(){
- const d=await loadInventory(),c=d.counts||{};
- $("#description").textContent="首页只读取资源清单；切换到产品页签后才查询对应 Analytics。";
- $("#content").innerHTML=`<div class="space-y-8">
- ${section("资源总览","资源数量来自 Cloudflare REST API，不会为了展示名称额外查询 Analytics。")}
- ${metrics([["Zone",fmt(c.zones),"已发现资源"],["Workers",fmt(c.workers),"已发现资源"],["D1",fmt(c.d1),"已发现资源"],["KV Namespace",fmt(c.kv),"已发现资源"],["R2 Bucket",fmt(c.r2),"已发现资源"],["Durable Objects",fmt(c.durableObjects),"已发现资源"],["Queues",fmt(c.queues),"已发现资源"],["Workflows",fmt(c.workflows),"已发现资源"]])}
- <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
- ${infoCard("Cloudflare Zone","点击「网站 / Zone」后才查询请求、流量、缓存和 Firewall Analytics。")}
- ${infoCard("Workers","点击页签后才查询 Workers Invocations Analytics，可按脚本和状态查看。")}
- ${infoCard("D1","查询 Rows、Query、Latency、Storage；Analytics 保留期按 Cloudflare 当前规则。")}
- ${infoCard("KV","查询 Operations、Latency、Namespace、Key Count 与 Byte Count。")}
- ${infoCard("R2","查询 Operations、Status、Bucket、Object Count 与 Storage。")}
- ${infoCard("Durable Objects","查询 Requests、Subrequests、CPU、Memory、Storage 与 Namespace。")}
- </div>
- </div>`;
- if(d.warnings?.length)$("#content").insertAdjacentHTML("beforeend",`<div class="error-box mt-4">资源发现警告：${d.warnings.map(x=>x.module+": "+x.error).join("\\n")}</div>`);
-}
-function infoCard(t,s){return `<div class="chart-card rounded-[22px] p-5"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center text-sky-600">◆</div><h3 class="font-bold">${t}</h3></div><p class="mt-4 text-sm leading-6 text-slate-500">${s}</p></div>`}
-async function product(tab){
- const d=S.cache[tab]||(S.cache[tab]=await api(`/api/${tab}?days=${S.days}`));
- $("#description").textContent=`最近 ${S.days} 天 · 只请求 ${TABS[tab]} 数据`;
- let h="";
- if(tab==="workers")h=`${metrics([["Requests",fmt(d.requests)],["Errors",fmt(d.errors),`错误率 ${pct(d.errors,d.requests)}`],["Subrequests",fmt(d.subrequests)],["CPU P50",fmt(d.cpuP50)+" ms"],["CPU P99",fmt(d.cpuP99)+" ms"]])}<div class="grid gap-4 lg:grid-cols-2 mt-5"><div class="chart-card rounded-[22px] p-4">${section("请求趋势")}<div id="a" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("错误趋势")}<div id="b" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("Worker 请求排行")}<div id="c" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("Invocation Status")}<div id="d" class="chart"></div></div></div>`;
- if(tab==="d1")h=`${metrics([["Rows Read",fmt(d.rowsRead),"D1 计费核心指标"],["Rows Written",fmt(d.rowsWritten)],["Read Queries",fmt(d.readQueries)],["Write Queries",fmt(d.writeQueries)],["Query Response",bytes(d.responseBytes)],["Query Latency",fmt(d.latency)+" ms"],["P99 Latency",fmt(d.p99)+" ms"],["Storage",bytes(d.storage)]])}<div class="grid gap-4 lg:grid-cols-2 mt-5"><div class="chart-card rounded-[22px] p-4">${section("Rows 趋势")}<div id="a" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("Database Rows Read")}<div id="b" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("Storage 趋势")}<div id="c" class="chart"></div></div></div>`;
- if(tab==="kv")h=`${metrics([["Operations",fmt(d.operations)],["Reads",fmt(d.reads)],["Writes",fmt(d.writes)],["Deletes",fmt(d.deletes)],["Lists",fmt(d.lists)],["Storage",bytes(d.storage)],["Keys",fmt(d.keys)],["P99 Latency",fmt(d.p99)+" ms"]])}<div class="grid gap-4 lg:grid-cols-2 mt-5"><div class="chart-card rounded-[22px] p-4">${section("Operations 趋势")}<div id="a" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("操作类型")}<div id="b" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("Namespace")}<div id="c" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("Storage 趋势")}<div id="d" class="chart"></div></div></div>`;
- if(tab==="r2")h=`${metrics([["Operations",fmt(d.operations)],["Object Storage",bytes(d.storage)],["Metadata",bytes(d.metadata)],["Objects",fmt(d.objects)],["Pending Uploads",fmt(d.uploads)]])}<div class="grid gap-4 lg:grid-cols-2 mt-5"><div class="chart-card rounded-[22px] p-4">${section("Operations 趋势")}<div id="a" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("Operation Type")}<div id="b" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("Bucket")}<div id="c" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("Response Status")}<div id="d" class="chart"></div></div></div>`;
- if(tab==="do")h=`${metrics([["Requests",fmt(d.requests)],["Subrequests",fmt(d.subrequests)],["CPU Time",fmt(d.cpu)+" ms"],["Response",bytes(d.responseBytes)],["Storage",bytes(d.storage)],["Memory P50",bytes(d.memoryP50)],["Memory P90",bytes(d.memoryP90)],["Memory P99",bytes(d.memoryP99)]])}<div class="grid gap-4 lg:grid-cols-2 mt-5"><div class="chart-card rounded-[22px] p-4">${section("Requests 趋势")}<div id="a" class="chart"></div></div><div class="chart-card rounded-[22px] p-4">${section("Namespace")}<div id="b" class="chart"></div></div></div>`;
- $("#content").innerHTML=h;
- if(tab==="workers"){chart("a",line(d.trend));chart("b",line(d.errorTrend,"错误"));chart("c",bars(d.scripts));chart("d",pie(d.statuses))}
- if(tab==="d1"){chart("a",multiLine(d.readTrend,d.writeTrend));chart("b",bars(d.databases));chart("c",line(d.storageTrend,"Storage"))}
- if(tab==="kv"){chart("a",line(d.trend,"Operations"));chart("b",pie(d.actions));chart("c",bars(d.namespaces));chart("d",line(d.storageTrend,"Bytes"))}
- if(tab==="r2"){chart("a",line(d.trend,"Operations"));chart("b",pie(d.actions));chart("c",bars(d.buckets));chart("d",pie(d.statuses))}
- if(tab==="do"){chart("a",line(d.trend));chart("b",bars(d.namespaces))}
-}
-async function zone(){
- const inv=await loadInventory(),zones=inv.resources?.zones||[];
- if(!zones.length){$("#content").innerHTML=`<div class="metric-card rounded-[22px] loading">没有发现 Zone。</div>`;return}
- const current=$("#zone").value||zones[0].id;$("#zone").value=current;
- const d=S.cache["zone:"+current]||(S.cache["zone:"+current]=await api(`/api/zone?days=${S.days}&zone=${encodeURIComponent(current)}`));
- $("#description").textContent=`${zones.find(x=>x.id===current)?.name||current} · 最近 ${S.days} 天 · HTTP / Firewall 分开查询`;
- $("#content").innerHTML=`${d.warnings?.length?`<div class="error-box mb-4">${d.warnings.join("\\n")}</div>`:""}${section("流量分析","请求、访问、边缘响应流量与缓存。")}
- ${metrics([["Requests",fmt(d.requests)],["Visits",fmt(d.visits)],["Traffic",bytes(d.bytes)],["Cache Hit",pct(d.cacheHits,d.requests)],["Firewall Events",fmt(d.threats)]])}
- <div class="grid gap-4 lg:grid-cols-2 mt-5">
- <div class="chart-card rounded-[22px] p-4">${section("请求趋势")}<div id="z1" class="chart"></div></div>
- <div class="chart-card rounded-[22px] p-4">${section("流量趋势")}<div id="z2" class="chart"></div></div>
- <div class="chart-card rounded-[22px] p-4">${section("国家")}<div id="z3" class="chart"></div></div>
- <div class="chart-card rounded-[22px] p-4">${section("HTTP Status")}<div id="z4" class="chart"></div></div>
- <div class="chart-card rounded-[22px] p-4">${section("浏览器")}<div id="z5" class="chart"></div></div>
- <div class="chart-card rounded-[22px] p-4">${section("设备")}<div id="z6" class="chart"></div></div>
- <div class="chart-card rounded-[22px] p-4">${section("缓存")}<div id="z7" class="chart"></div></div>
- <div class="chart-card rounded-[22px] p-4">${section("Colo")}<div id="z8" class="chart"></div></div>
- <div class="chart-card rounded-[22px] p-4">${section("Firewall Action")}<div id="z9" class="chart"></div></div>
- <div class="chart-card rounded-[22px] p-4">${section("Threat 来源")}<div id="z10" class="chart"></div></div>
- </div>`;
- chart("z1",line(d.trend));chart("z2",line(d.trafficTrend,"Bytes"));
- [["z3",d.countries],["z4",d.statuses],["z5",d.browsers],["z6",d.devices],["z7",d.cache],["z8",d.colos],["z9",d.threatActions],["z10",d.sources]].forEach(([id,r])=>chart(id,bars(r)));
-}
-$("#tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;S.tab=b.dataset.tab;localStorage.setItem("cf-tab",S.tab);$$(".dashboard-tab").forEach(x=>x.classList.toggle("is-active",x===b));render()});
-$("#ranges").addEventListener("click",e=>{const b=e.target.closest("[data-days]");if(!b)return;S.days=+b.dataset.days;localStorage.setItem("cf-days",S.days);$$(".time-range-btn").forEach(x=>x.classList.toggle("is-active",x===b));S.cache={};render()});
-$("#zone").addEventListener("change",()=>{if(S.tab==="zone"){clearCharts();render()}});
-$("#refresh").onclick=()=>{if(S.tab==="zone"){const z=$("#zone").value;delete S.cache["zone:"+z]}else delete S.cache[S.tab];render()};
-$("#theme").onclick=()=>{const dark=!document.documentElement.classList.contains("dark");document.documentElement.classList.toggle("dark",dark);localStorage.setItem("cf-theme",dark?"dark":"light");render()};
-window.addEventListener("resize",()=>S.charts.forEach(c=>c.resize()));
-(async()=>{if(localStorage.getItem("cf-theme")==="dark")document.documentElement.classList.add("dark");try{const c=await api("/api/config");$("#page-title").textContent=c.siteName||"Cloudflare 监控"}catch{} await render()})();
-</script>
-</body></html>
+function metricSkeleton(n=6){return `<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">${Array.from({length:n},()=>`<div class="skeleton sk-card"></div>`).join("")}</div>`}
+function chartSkeleton(n=4){return `<div class="grid md:grid-cols-2 gap-4 mt-4">${Array.from({length:n},()=>`<div class="skeleton sk-chart"></div>`).join("")}</div>`}
+function skeleton(tab){const n=tab==="overview"?8:tab==="zone"?9:tab==="do"?8:7;$("#content").innerHTML=metricSkeleton(n)+chartSkeleton(tab==="overview"?4:tab==="zone"?8:6)}
+function section(t,s=""){return `<div class="mb-3"><h2 class="section">${t}</h2>${s?`<p class="text-xs text-slate-400 ml-4 -mt-2">${s}</p>`:""}</div>`}
+function metrics(a){return `<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">${a.map(x=>`<div class="metric"><div class="label">${x[0]}</div><div class="value">${x[1]}</div><div class="sub">${x[2]||""}</div></div>`).join("")}</div>`}
+function card(title,id,sub=""){return `<div class="chart-card"><div class="flex justify-between gap-3 items-start"><div><h3 class="font-black text-base">${title}</h3>${sub?`<p class="text-xs text-slate-400 mt-1">${sub}</p>`:""}</div></div><div id="${id}" class="chart"></div></div>`}
+function empty(id,msg){const e=document.getElementById(id);if(e)e.innerHTML=`<div class="empty">${msg}</div>`}
+function chart(id,opt){requestAnimationFrame(()=>{const e=document.getElementById(id);if(!e)return;const c=echarts.init(e);S.charts.push(c);c.setOption(opt)})}
+function axisBase(){return{grid:{left:48,right:22,top:22,bottom:55},tooltip:{trigger:"axis"},xAxis:{type:"category",axisLabel:{color:"#98a2b3"},axisLine:{lineStyle:{color:"#e4e7ec"}}},yAxis:{type:"value",axisLabel:{color:"#98a2b3"},splitLine:{lineStyle:{color:"#eef2f6"}}}}}
+function line(rows,name="",smooth=true){rows=Array.isArray(rows)?rows:[];if(!rows.length)return{};const o=axisBase();o.xAxis.data=rows.map(x=>String(x.date).replace("T"," ").slice(0,16));o.series=[{name,type:"line",smooth,symbol:"none",data:rows.map(x=>x.value||0),lineStyle:{width:3,color:C[0]},itemStyle:{color:C[0]},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:C[0]+"55"},{offset:1,color:C[0]+"00"}])}}];return o}
+function multi(lines){if(!lines.some(x=>x.rows?.length))return{};const o=axisBase();o.xAxis.data=(lines.find(x=>x.rows?.length)?.rows||[]).map(x=>String(x.date).slice(0,16));o.legend={top:0};o.series=lines.map((x,i)=>({name:x.name,type:"line",smooth:true,symbol:"none",data:(x.rows||[]).map(r=>r.value||0),lineStyle:{width:3,color:C[i]},itemStyle:{color:C[i]}}));return o}
+function bars(rows){rows=Array.isArray(rows)?rows.slice(0,18):[];if(!rows.length)return{};const o=axisBase();o.xAxis.data=rows.map(x=>String(x.name));o.xAxis.axisLabel.rotate=rows.length>7?30:0;o.series=[{type:"bar",barMaxWidth:28,data:rows.map((x,i)=>({value:x.value||0,itemStyle:{color:C[i%C.length],borderRadius:[7,7,2,2]}}))}];return o}
+function pie(rows){rows=Array.isArray(rows)?rows:[];if(!rows.length)return{};return{tooltip:{trigger:"item"},legend:{type:"scroll",bottom:0},series:[{type:"pie",radius:["38%","70%"],center:["50%","45%"],itemStyle:{borderColor:"#fff",borderWidth:2},data:rows.map((x,i)=>({name:x.name,value:x.value,itemStyle:{color:C[i%C.length]}}))}]}}
+function refreshCharts(){S.charts.forEach(c=>c.resize())}
+async function inventory(){return S.inv||(S.inv=await api("/api/inventory"))}
+function setupTabs(){ $$(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===S.tab)); $("#zoneBox").classList.toggle("hidden",S.tab!=="zone") }
+async function render(){clearCharts();setupTabs();skeleton(S.tab);state("正在加载…");try{if(S.tab==="overview")await overview();else if(S.tab==="zone")await zone();else if(S.tab==="workers")await workers();else if(S.tab==="d1")await d1();else if(S.tab==="kv")await kv();else if(S.tab==="r2")await r2();else if(S.tab==="do")await dor();else if(S.tab==="queues")await queues();else await workflows();state("已更新 · "+new Date().toLocaleTimeString())}catch(e){$("#content").innerHTML=`<div class="error"><b>${T[S.tab]} 加载失败</b>\n${e.message}</div>`;state("加载失败")}}
+async function overview(){const d=await inventory(),c=d.counts||{};$("#content").innerHTML=section("资源总览")+metrics([["Zone",fmt(c.zones)],["Workers",fmt(c.workers)],["D1",fmt(c.d1)],["KV Namespace",fmt(c.kv)],["R2 Bucket",fmt(c.r2)],["Durable Objects",fmt(c.durableObjects)],["Queues",fmt(c.queues)],["Workflows",fmt(c.workflows)]])+`<div class="grid md:grid-cols-2 gap-4 mt-4">${card("资源类型分布","ov1")}${card("资源数量","ov2")}${card("Zone 状态","ov3")}${card("产品覆盖","ov4")}</div>`;const list=Object.entries(c).map(([name,value])=>({name,value}));chart("ov1",pie(list));chart("ov2",bars(list));chart("ov3",pie((d.resources.zones||[]).reduce((a,x)=>{const k=x.status||"unknown";const p=a.find(y=>y.name===k);p?p.value++:a.push({name:k,value:1});return a},[])));chart("ov4",bars(list))}
+async function zone(){const inv=await inventory(),zs=inv.resources?.zones||[];$("#zone").innerHTML=zs.map(z=>`<option value="${z.id}">${z.name}</option>`).join("")||`<option value="">无 Zone</option>`;if(!zs.length){$("#content").innerHTML=`<div class="error">没有发现 Zone</div>`;return}const zid=$("#zone").value||zs[0].id;$("#zone").value=zid;const key="zone:"+zid+":"+S.days,d=S.cache[key]||(S.cache[key]=await api(`/api/zone?days=${S.days}&zone=${encodeURIComponent(zid)}`));const status=["2xx","3xx","4xx","5xx"].map(k=>({name:k,value:(d.statusClasses||[]).find(x=>x.name===k)?.value||0}));$("#content").innerHTML=section("网站 / Zone")+metrics([["Requests",fmt(d.requests)],["Visits",fmt(d.visits)],["Traffic",bytes(d.bytes)],["Cache Hit",pct(d.cacheHits,d.requests)],["2xx",fmt(status[0].value)],["3xx",fmt(status[1].value)],["4xx",fmt(status[2].value)],["5xx",fmt(status[3].value)],["Firewall Events",fmt(d.threats)]])+`<div class="grid md:grid-cols-2 gap-4 mt-4">${card("请求趋势","z1")}${card("流量趋势","z2")}${card("HTTP 状态","z3")}${card("状态分类","z4")}${card("国家","z5")}${card("设备","z6")}${card("缓存状态","z7")}${card("Colo","z8")}${card("Firewall Action","z9")}${card("Threat 来源","z10")}${card("Threat 趋势","z11")}</div>`;chart("z1",line(d.trend,"Requests"));chart("z2",line(d.trafficTrend,"Bytes"));chart("z3",bars(d.statuses));chart("z4",pie(status));chart("z5",bars(d.countries));chart("z6",pie(d.devices));chart("z7",pie(d.cache));chart("z8",bars(d.colos));chart("z9",pie(d.threatActions));chart("z10",bars(d.threatSources));chart("z11",line(d.threatTrend,"Threats"))}
+async function workers(){const d=S.cache.workers||(S.cache.workers=await api(`/api/workers?days=${S.days}`));$("#content").innerHTML=section("Workers")+metrics([["Requests",fmt(d.requests)],["Errors",fmt(d.errors),"Error Rate "+pct(d.errors,d.requests)],["Subrequests",fmt(d.subrequests)],["CPU P50",fmt(d.cpuP50)+" ms"],["CPU P99",fmt(d.cpuP99)+" ms"],["Error Rate",pct(d.errors,d.requests)]] )+`<div class="grid md:grid-cols-2 gap-4 mt-4">${card("请求趋势","w1")}${card("错误趋势","w2")}${card("错误率","w3")}${card("Subrequests","w4")}${card("CPU P50","w5")}${card("Worker 请求排行","w6")}${card("Invocation Status","w7")}</div>`;chart("w1",line(d.trend,"Requests"));chart("w2",line(d.errorTrend,"Errors"));chart("w3",line(d.errorRateTrend,"Error Rate"));chart("w4",line(d.subTrend,"Subrequests"));chart("w5",line(d.cpuTrend,"CPU P50"));chart("w6",bars(d.scripts));chart("w7",pie(d.statuses))}
+async function d1(){const d=S.cache.d1||(S.cache.d1=await api(`/api/d1?days=${S.days}`));$("#content").innerHTML=section("D1")+metrics([["Rows Read",fmt(d.rowsRead)],["Rows Written",fmt(d.rowsWritten)],["Read Queries",fmt(d.readQueries)],["Write Queries",fmt(d.writeQueries)],["Response",bytes(d.responseBytes)],["P50",fmt(d.p50)+" ms"],["P90",fmt(d.p90)+" ms"],["P99",fmt(d.p99)+" ms"],["Storage",bytes(d.storage)]])+`<div class="grid md:grid-cols-2 gap-4 mt-4">${card("Rows Read / Written","d11")}${card("Read / Write Queries","d12")}${card("Latency P90","d13")}${card("Database Rows Read","d14")}${card("Storage 趋势","d15")}</div>`;chart("d11",multi([{name:"Rows Read",rows:d.readTrend},{name:"Rows Written",rows:d.writeTrend}]));chart("d12",multi([{name:"Read Queries",rows:d.readQueryTrend},{name:"Write Queries",rows:d.writeQueryTrend}]));chart("d13",line(d.latencyTrend,"P90"));chart("d14",bars(d.databases));chart("d15",line(d.storageTrend,"Storage"))}
+async function kv(){const d=S.cache.kv||(S.cache.kv=await api(`/api/kv?days=${S.days}`));$("#content").innerHTML=section("Workers KV")+metrics([["Operations",fmt(d.operations)],["Reads",fmt(d.reads)],["Writes",fmt(d.writes)],["Deletes",fmt(d.deletes)],["Lists",fmt(d.lists)],["Storage",bytes(d.storage)],["Keys",fmt(d.keys)],["P50",fmt(d.p50)+" ms"],["P99",fmt(d.p99)+" ms"]])+`<div class="grid md:grid-cols-2 gap-4 mt-4">${card("Operations 趋势","k1")}${card("操作类型","k2")}${card("Namespace","k3")}${card("Storage","k4")}${card("Key Count","k5")}${card("P90 Latency","k6")}</div>`;chart("k1",line(d.trend,"Operations"));chart("k2",pie(d.actions));chart("k3",bars(d.namespaces));chart("k4",line(d.storageTrend,"Bytes"));chart("k5",line(d.keyTrend,"Keys"));chart("k6",line(d.latencyTrend,"P90"))}
+async function r2(){const d=S.cache.r2||(S.cache.r2=await api(`/api/r2?days=${S.days}`));$("#content").innerHTML=section("R2")+metrics([["Operations",fmt(d.operations)],["Object Storage",bytes(d.storage)],["Metadata",bytes(d.metadata)],["Objects",fmt(d.objects)],["Pending Uploads",fmt(d.uploads)]])+`<div class="grid md:grid-cols-2 gap-4 mt-4">${card("Operations 趋势","r1")}${card("Operation Type","r2")}${card("Action Status","r3")}${card("HTTP Status","r4")}${card("Bucket","r5")}${card("Storage","r6")}${card("Objects","r7")}</div>`;chart("r1",line(d.trend,"Operations"));chart("r2",pie(d.actions));chart("r3",pie(d.actionStatus));chart("r4",bars(d.statuses));chart("r5",bars(d.buckets));chart("r6",line(d.storageTrend,"Bytes"));chart("r7",line(d.objectsTrend,"Objects"))}
+async function dor(){const d=S.cache.do||(S.cache.do=await api(`/api/do?days=${S.days}`));$("#content").innerHTML=section("Durable Objects")+metrics([["Requests",fmt(d.requests)],["Subrequests",fmt(d.subrequests)],["CPU Time",fmt(d.cpu)+" ms"],["Response",bytes(d.responseBytes)],["Storage",bytes(d.storage)],["Memory P50",bytes(d.memoryP50)],["Memory P90",bytes(d.memoryP90)],["Memory P99",bytes(d.memoryP99)]] )+`<div class="grid md:grid-cols-2 gap-4 mt-4">${card("Requests 趋势","o1")}${card("Subrequests","o2")}${card("CPU","o3")}${card("Storage","o4")}${card("Namespace","o5")}</div>`;chart("o1",line(d.trend,"Requests"));chart("o2",line(d.subTrend,"Subrequests"));chart("o3",line(d.cpuTrend,"CPU"));chart("o4",line(d.storageTrend,"Storage"));chart("o5",bars(d.namespaces))}
+async function queues(){const d=S.cache.queues||(S.cache.queues=await api(`/api/queues?days=${S.days}`));$("#content").innerHTML=section("Queues")+metrics([["Avg Backlog",fmt(d.backlog)],["Backlog Bytes",bytes(d.backlogBytes)],["Concurrency",fmt(d.concurrency)],["Operations",fmt(d.operations)],["Operation Bytes",bytes(d.bytes)]] )+`<div class="grid md:grid-cols-2 gap-4 mt-4">${card("Backlog","q1")}${card("Consumer Concurrency","q2")}${card("Operations","q3")}${card("Queue 排行","q4")}${card("Operation Type","q5")}</div>`;chart("q1",line(d.trend,"Messages"));chart("q2",line(d.concurrencyTrend,"Concurrency"));chart("q3",line(d.trend,"Operations"));chart("q4",bars(d.queues));chart("q5",pie(d.actions))}
+async function workflows(){const d=S.cache.workflows||(S.cache.workflows=await api(`/api/workflows?days=${S.days}`));$("#content").innerHTML=section("Workflows")+metrics([["Runs",fmt(d.runs)],["Events",fmt(d.events)],["Wall Time",fmt(d.wallTime)+" ms"]])+`<div class="grid md:grid-cols-2 gap-4 mt-4">${card("Workflow Runs","f1")}${card("Events 趋势","f2")}${card("Workflow 排行","f3")}${card("Event Type","f4")}${card("Step","f5")}</div>`;chart("f1",line(d.trend,"Runs"));chart("f2",line(d.eventsTrend,"Events"));chart("f3",bars(d.workflows));chart("f4",pie(d.eventsByType));chart("f5",bars(d.steps))}
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;S.tab=b.dataset.tab;localStorage.setItem("cf-tab",S.tab);render()});
+$("#ranges").addEventListener("click",e=>{const b=e.target.closest("[data-days]");if(!b)return;S.days=Number(b.dataset.days);localStorage.setItem("cf-days",S.days);$$(".range").forEach(x=>x.classList.toggle("active",x===b));S.cache={};render()});
+$("#zone").addEventListener("change",()=>{if(S.tab==="zone")render()});
+$("#refresh").onclick=()=>{if(S.tab==="zone"){const z=$("#zone").value;delete S.cache["zone:"+z+":"+S.days]}else delete S.cache[S.tab];render()};
+$("#theme").onclick=()=>{document.documentElement.classList.toggle("dark");localStorage.setItem("cf-theme",document.documentElement.classList.contains("dark")?"dark":"light");render()};window.addEventListener("resize",refreshCharts);
+(async()=>{if(localStorage.getItem("cf-theme")==="dark")document.documentElement.classList.add("dark");try{const c=await api("/api/config");$("#title").textContent=c.siteName||"Cloudflare 监控"}catch{}$$('.range').forEach(x=>x.classList.toggle('active',Number(x.dataset.days)===S.days));render()})();
+</script></body></html>
