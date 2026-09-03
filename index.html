@@ -278,7 +278,6 @@ function renderProduct(tab,d){
   ["平均积压",fmt(d.backlog)],["积压字节",bytes(d.backlogBytes)],["并发",fmt(d.concurrency)],
   ["操作数",fmt(d.operations)],["操作字节",bytes(d.operationBytes)],["队列数",fmt(d.queues?.length)]
  ],
- 
  }[tab]||[];
  let body=metrics(common);
  if(tab==="workers")body+=`<div class="grid charts">${card("请求趋势","p1","按小时",true)}${card("错误趋势","p2","按小时",true)}${pieCard("脚本请求","p3")}${pieCard("状态分布","p4")}${card("内存趋势","p5","P50",true)}</div>`;
