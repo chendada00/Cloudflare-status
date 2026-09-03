@@ -26,15 +26,15 @@ button,select{font:inherit}button{cursor:pointer}
 .app-shell::after{content:"";position:absolute;width:380px;height:380px;right:-180px;top:-180px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.13),transparent 68%);pointer-events:none}
 .top{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:0 2px 14px}
 .brand{display:flex;align-items:center;gap:13px}.brand-mark{width:45px;height:45px;border-radius:15px;display:grid;place-items:center;color:#fff;font-weight:900;letter-spacing:-.04em;background:linear-gradient(135deg,#0ea5e9,#6366f1 58%,#8b5cf6);box-shadow:0 14px 34px -16px rgba(79,70,229,.6);position:relative;overflow:hidden}.brand-mark::after{content:"";position:absolute;inset:-45%;background:linear-gradient(120deg,transparent 35%,rgba(255,255,255,.48),transparent 65%);transform:translateX(-70%);animation:shine 4.5s ease-in-out infinite}.brand h1{font-size:21px;margin:0;font-weight:800;letter-spacing:-.03em}.brand p{margin:4px 0 0;color:var(--muted);font-size:12px}.actions{display:flex;gap:8px}.btn{border:1px solid var(--line);background:rgba(255,255,255,.68);color:#334155;border-radius:12px;padding:9px 13px;font-weight:700;box-shadow:0 10px 28px -24px rgba(15,23,42,.45);transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}.btn:hover{transform:translateY(-1px);border-color:rgba(56,189,248,.5);background:#fff;box-shadow:0 18px 35px -25px rgba(2,132,199,.42)}.btn.primary{background:#0f172a;color:#fff;border-color:#0f172a}.btn.primary:hover{background:#111827}
-.nav{display:flex;align-items:center;gap:4px;overflow:auto;padding:5px;margin-bottom:12px;border:1px solid rgba(226,232,240,.8);background:rgba(255,255,255,.66);border-radius:16px;box-shadow:0 16px 45px -38px rgba(15,23,42,.42);scrollbar-width:none;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}.nav::-webkit-scrollbar{display:none}.tab{position:relative;border:0;background:transparent;color:#64748b;padding:9px 13px;border-radius:11px;white-space:nowrap;font-size:13px;font-weight:700;transition:color .2s ease,background .2s ease,transform .2s ease}.tab:hover{background:rgba(255,255,255,.78);color:#0f172a;transform:translateY(-1px)}.tab-icon{display:inline-flex;align-items:center;justify-content:center;margin-right:5px;font-size:14px;filter:saturate(1.15)}.tab.active{color:#fff;background:linear-gradient(135deg,#0f172a,#334155);box-shadow:0 12px 26px -19px rgba(15,23,42,.8)}
+.nav{display:flex;align-items:center;gap:4px;overflow:auto;padding:5px;margin-bottom:12px;border:1px solid rgba(226,232,240,.8);background:rgba(255,255,255,.66);border-radius:16px;box-shadow:0 16px 45px -38px rgba(15,23,42,.42);scrollbar-width:none;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}.nav::-webkit-scrollbar{display:none}.tab{position:relative;border:0;background:transparent;color:#64748b;padding:9px 13px;border-radius:11px;white-space:nowrap;font-size:13px;font-weight:700;transition:color .2s ease,background .2s ease,transform .2s ease}.tab:hover{background:rgba(255,255,255,.78);color:#0f172a;transform:translateY(-1px)}.tab.active{color:#fff;background:linear-gradient(135deg,#0f172a,#334155);box-shadow:0 12px 26px -19px rgba(15,23,42,.8)}
 .controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid rgba(226,232,240,.78);background:rgba(255,255,255,.64);border-radius:16px;margin-bottom:15px;box-shadow:0 16px 44px -40px rgba(15,23,42,.42);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}.ranges{display:flex;gap:4px}.range{border:0;background:transparent;color:#64748b;border-radius:10px;padding:7px 11px;font-weight:700;font-size:12px;transition:all .18s ease}.range:hover{background:rgba(255,255,255,.85);color:#0f172a}.range.active{background:#e0f2fe;color:#0369a1;box-shadow:inset 0 0 0 1px rgba(14,165,233,.18)}select{min-width:270px;border:1px solid var(--line);background:rgba(255,255,255,.84);border-radius:10px;padding:8px 10px;color:#334155;outline:none}.state{font-size:12px;color:#94a3b8}
 .hero{position:relative;overflow:hidden;background:rgba(255,255,255,.72);border:1px solid rgba(226,232,240,.82);border-radius:22px;padding:21px;margin-bottom:14px;box-shadow:var(--shadow);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}.hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.06) 1px,transparent 1px);background-size:26px 26px;mask-image:linear-gradient(90deg,#000,transparent 82%);pointer-events:none}.hero-title{position:relative;font-size:12px;color:#94a3b8;font-weight:800;letter-spacing:.13em}.hero-main{position:relative;display:flex;align-items:end;justify-content:space-between;gap:20px;margin-top:7px}.hero h2{font-size:28px;margin:0;letter-spacing:-.04em}.hero-note{font-size:12px;color:#94a3b8}.hero-desc{margin-top:5px;font-size:12px;color:#64748b}.small-empty{height:230px;padding:20px;text-align:center}
 .grid{display:grid;gap:12px}.metrics{grid-template-columns:repeat(6,minmax(0,1fr))}.metric-top{display:flex;align-items:center;justify-content:space-between;gap:12px}.metric-icon{width:42px;height:42px;flex:none;border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--mc);background:var(--mb);transition:transform .25s ease,box-shadow .25s ease}.metric-icon svg{width:21px;height:21px}.metric:hover .metric-icon{transform:translateY(-2px) rotate(-3deg);box-shadow:0 8px 20px var(--mb)}
 .metric{position:relative;overflow:hidden;background:rgba(255,255,255,.72);border:1px solid rgba(226,232,240,.82);border-radius:17px;padding:15px;box-shadow:0 18px 50px -42px rgba(15,23,42,.38);min-width:0;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.metric::after,.card::after{content:"";position:absolute;inset:auto -20% -70% 20%;height:130px;background:radial-gradient(circle,rgba(56,189,248,.10),transparent 68%);opacity:0;transition:opacity .25s ease;pointer-events:none}.metric:hover,.card:hover{transform:translateY(-3px);border-color:rgba(56,189,248,.38);box-shadow:0 30px 72px -48px rgba(15,23,42,.48)}.metric:hover::after,.card:hover::after{opacity:1}.metric-label{font-size:12px;color:#64748b}.metric-value{font-size:22px;font-weight:800;margin-top:7px;letter-spacing:-.035em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.metric-sub{font-size:11px;color:#94a3b8;margin-top:4px}
-.charts{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:12px}.card{position:relative;overflow:hidden;background:rgba(255,255,255,.72);border:1px solid rgba(226,232,240,.82);border-radius:18px;padding:15px;box-shadow:0 22px 60px -47px rgba(15,23,42,.4);min-width:0;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.card.wide{grid-column:1/-1}.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.card-title{font-size:14px;font-weight:800;margin:0}.card-note{font-size:11px;color:#94a3b8;margin-top:3px}.chart{height:300px;margin-top:7px}.pie{height:300px}.list{margin-top:10px;display:flex;flex-direction:column;gap:7px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 10px;border-radius:11px;background:rgba(248,250,252,.72);font-size:12px}.row span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row strong{font-weight:800}.notice{padding:11px 13px;border-radius:12px;background:rgba(240,249,255,.88);border:1px solid rgba(125,211,252,.55);color:#075985;font-size:12px;margin-bottom:12px}.error{padding:18px;border-radius:15px;background:rgba(254,242,242,.9);border:1px solid #fecaca;color:#b91c1c;font-size:13px}.empty{height:280px;display:grid;place-items:center;color:#94a3b8;font-size:13px}.loading{height:110px;border-radius:15px;background:linear-gradient(110deg,rgba(226,232,240,.65) 20%,rgba(255,255,255,.9) 42%,rgba(226,232,240,.65) 64%);background-size:220% 100%;animation:load 1.25s infinite}.loading.chart-load{height:320px}@keyframes load{to{background-position:-220% 0}}@keyframes shine{0%,55%{transform:translateX(-70%)}85%,100%{transform:translateX(70%)}}
-.footer{text-align:center;color:#94a3b8;font-size:11px;padding:18px}.theme{position:fixed;right:18px;bottom:18px;border:1px solid var(--line);background:rgba(255,255,255,.78);color:var(--text);border-radius:999px;padding:9px 12px;box-shadow:0 22px 54px -32px rgba(15,23,42,.42);backdrop-filter:blur(16px);z-index:20}
-html.dark{--bg:#090f18;--surface:rgba(15,23,42,.72);--surface-solid:#0f172a;--surface2:rgba(30,41,59,.72);--text:#eef2ff;--muted:#94a3b8;--line:rgba(71,85,105,.58)}html.dark body{background:radial-gradient(900px 520px at 8% -5%,rgba(14,165,233,.13),transparent 62%),radial-gradient(780px 520px at 94% 3%,rgba(99,102,241,.14),transparent 60%),#090f18}html.dark .app-shell,html.dark .nav,html.dark .controls,html.dark .hero,html.dark .metric,html.dark .card{background:rgba(15,23,42,.68);border-color:rgba(71,85,105,.52)}html.dark .btn,html.dark select{background:rgba(15,23,42,.72);color:#e2e8f0;border-color:rgba(71,85,105,.58)}html.dark .btn.primary,.html.dark .tab.active{background:#f8fafc;color:#0f172a}html.dark .tab:hover,html.dark .range:hover{background:rgba(30,41,59,.8);color:#f8fafc}html.dark .range.active{background:rgba(14,165,233,.18);color:#7dd3fc}html.dark .row{background:rgba(30,41,59,.6)}html.dark .notice{background:rgba(8,47,73,.45);border-color:rgba(14,165,233,.35);color:#bae6fd}html.dark .error{background:rgba(69,10,10,.4);border-color:rgba(248,113,113,.35);color:#fca5a5}
-@media(max-width:1100px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.shell{padding:10px}.app-shell{padding:10px;border-radius:22px}.top{align-items:flex-start}.brand h1{font-size:18px}.actions .btn:first-child{display:none}.metrics,.charts{grid-template-columns:1fr}.card.wide{grid-column:auto}.hero-main{display:block}.hero-note{margin-top:8px}select{width:100%;min-width:0}.controls{align-items:stretch}.theme{right:10px;bottom:10px}}
+.overview-status{margin-top:12px}.overview-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}.overview-summary>div{padding:13px 14px;border-radius:13px;background:rgba(248,250,252,.68);border:1px solid rgba(226,232,240,.68)}.overview-summary strong{display:block;font-size:20px;letter-spacing:-.03em}.overview-summary span{display:block;margin-top:3px;color:#94a3b8;font-size:11px}.resource-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.resource-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border-radius:13px;background:rgba(248,250,252,.54);border:1px solid rgba(226,232,240,.62)}.resource-name{font-size:12px;font-weight:800}.resource-desc{font-size:10px;color:#94a3b8;margin-top:3px}.resource-right{display:flex;align-items:center;gap:10px;flex:none}.resource-right strong{font-size:15px}.status-dot{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:#64748b}.status-dot i{display:block;width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.10)}.charts{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:12px}.card{position:relative;overflow:hidden;background:rgba(255,255,255,.72);border:1px solid rgba(226,232,240,.82);border-radius:18px;padding:15px;box-shadow:0 22px 60px -47px rgba(15,23,42,.4);min-width:0;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.card.wide{grid-column:1/-1}.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.card-title{font-size:14px;font-weight:800;margin:0}.card-note{font-size:11px;color:#94a3b8;margin-top:3px}.chart{height:300px;margin-top:7px}.pie{height:300px}.list{margin-top:10px;display:flex;flex-direction:column;gap:7px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 10px;border-radius:11px;background:rgba(248,250,252,.72);font-size:12px}.row span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row strong{font-weight:800}.notice{padding:11px 13px;border-radius:12px;background:rgba(240,249,255,.88);border:1px solid rgba(125,211,252,.55);color:#075985;font-size:12px;margin-bottom:12px}.error{padding:18px;border-radius:15px;background:rgba(254,242,242,.9);border:1px solid #fecaca;color:#b91c1c;font-size:13px}.empty{height:280px;display:grid;place-items:center;color:#94a3b8;font-size:13px}.loading{height:110px;border-radius:15px;background:rgba(255,255,255,.56);border:1px solid rgba(226,232,240,.72);display:grid;place-items:center;color:#94a3b8;font-size:12px}.loading.chart-load{height:220px}.page-loading{min-height:360px;display:flex;align-items:center;justify-content:center;gap:10px;color:#94a3b8;font-size:12px}.load-dot{position:relative;width:8px;height:8px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 0 rgba(22,163,74,.35);animation:dotPulse 1.35s ease-out infinite}.load-dot::after{content:"";position:absolute;inset:-7px;border:1px solid rgba(22,163,74,.28);border-radius:50%;animation:dotRing 1.35s ease-out infinite}@keyframes dotPulse{0%,100%{transform:scale(.9);box-shadow:0 0 0 0 rgba(22,163,74,.30)}45%{transform:scale(1.15);box-shadow:0 0 0 7px rgba(22,163,74,.02)}70%{transform:scale(1);box-shadow:0 0 0 0 rgba(22,163,74,0)}}@keyframes dotRing{0%{transform:scale(.55);opacity:.8}70%,100%{transform:scale(1.5);opacity:0}}@keyframes shine{0%,55%{transform:translateX(-70%)}85%,100%{transform:translateX(70%)}}
+.footer{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;color:#94a3b8;font-size:11px;padding:18px 0 2px}.footer-info{display:flex;align-items:center;gap:8px}.footer-refresh{padding:7px 11px;border-radius:10px}.footer-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.10)}.footer-dot.is-loading{animation:dotPulse 1.35s ease-out infinite}.theme{position:fixed;right:18px;bottom:18px;border:1px solid var(--line);background:rgba(255,255,255,.78);color:var(--text);border-radius:999px;padding:9px 12px;box-shadow:0 22px 54px -32px rgba(15,23,42,.42);backdrop-filter:blur(16px);z-index:20}
+html.dark{--bg:#090f18;--surface:rgba(15,23,42,.72);--surface-solid:#0f172a;--surface2:rgba(30,41,59,.72);--text:#eef2ff;--muted:#94a3b8;--line:rgba(71,85,105,.58)}html.dark body{background:radial-gradient(900px 520px at 8% -5%,rgba(14,165,233,.13),transparent 62%),radial-gradient(780px 520px at 94% 3%,rgba(99,102,241,.14),transparent 60%),#090f18}html.dark .app-shell,html.dark .nav,html.dark .controls,html.dark .hero,html.dark .metric,html.dark .card{background:rgba(15,23,42,.68);border-color:rgba(71,85,105,.52)}html.dark .btn,html.dark select{background:rgba(15,23,42,.72);color:#e2e8f0;border-color:rgba(71,85,105,.58)}html.dark .btn.primary,.html.dark .tab.active{background:#f8fafc;color:#0f172a}html.dark .tab:hover,html.dark .range:hover{background:rgba(30,41,59,.8);color:#f8fafc}html.dark .range.active{background:rgba(14,165,233,.18);color:#7dd3fc}html.dark .row,html.dark .overview-summary>div,html.dark .resource-row{background:rgba(30,41,59,.6)}html.dark .resource-desc,html.dark .status-dot{color:#94a3b8}html.dark .notice{background:rgba(8,47,73,.45);border-color:rgba(14,165,233,.35);color:#bae6fd}html.dark .error{background:rgba(69,10,10,.4);border-color:rgba(248,113,113,.35);color:#fca5a5}
+@media(max-width:1100px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.shell{padding:10px}.app-shell{padding:10px;border-radius:22px}.top{align-items:flex-start}.brand h1{font-size:18px}.actions .btn:first-child{display:none}.metrics,.charts,.resource-list{grid-template-columns:1fr}.overview-summary{grid-template-columns:1fr 1fr}.card.wide{grid-column:auto}.hero-main{display:block}.hero-note{margin-top:8px}select{width:100%;min-width:0}.controls{align-items:stretch}.theme{right:10px;bottom:10px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -49,7 +49,6 @@ html.dark{--bg:#090f18;--surface:rgba(15,23,42,.72);--surface-solid:#0f172a;--su
       </div>
     </div>
     <div class="actions">
-      <button class="btn" id="refresh">↻ 刷新</button>
       <button class="btn primary" id="theme">☾</button>
     </div>
   </header>
@@ -68,7 +67,7 @@ html.dark{--bg:#090f18;--surface:rgba(15,23,42,.72);--surface-solid:#0f172a;--su
   </section>
 
   <main id="content"></main>
-  <footer class="footer">Cloudflare Monitor · GraphQL Analytics</footer>
+  <footer class="footer"><div class="footer-info"><span class="footer-dot"></span><span id="footer-state">Cloudflare Monitor · GraphQL Analytics</span></div><button class="btn footer-refresh" id="refresh">↻ 刷新</button></footer>
 </div></div>
 
 <script>
@@ -103,14 +102,17 @@ async function api(path){
  if(!r.ok||!d.success)throw Error(d.error||"请求失败");
  return d.data;
 }
-function setState(s){$("#state").textContent=s}
+function setState(s){
+ $("#state").textContent=s;
+ const f=$("#footer-state");if(f)f.textContent=s;
+ const d=document.querySelector(".footer-dot");if(d)d.classList.toggle("is-loading",String(s).startsWith("加载中"));
+}
 function dispose(){
  S.charts.forEach(x=>{try{x.dispose()}catch{}});
  S.charts=[];
 }
 function load(){
- $("#content").innerHTML=`<div class="grid metrics">${Array.from({length:6},()=>`<div class="loading"></div>`).join("")}</div>
- <div class="grid charts"><div class="loading chart-load"></div><div class="loading chart-load"></div></div>`;
+ $("#content").innerHTML=`<div class="page-loading"><span class="load-dot"></span><span>加载中</span></div>`;
 }
 const metricIcons=["M9 12h6m-3-3v6","M3 12h18M12 3v18","M5 12h14l-2-2m2 2-2 2","M4 19h16M6 16h12M8 13h8M10 10h4","M12 3v18M3 12h18","M4 7h16v10H4z M8 11h8"];
 const metricColors=["#f97316","#2563eb","#12b76a","#7f56d9","#eab308","#ec4899"];
@@ -167,7 +169,7 @@ function empty(id,text="暂无可用数据"){
  const e=document.getElementById(id);if(e)e.innerHTML=`<div class="empty">${esc(text)}</div>`;
 }
 function renderTabs(){
- $("#tabs").innerHTML=Object.entries(T).map(([k,v])=>`<button class="tab ${S.tab===k?"active":""}" data-tab="${k}" title="${esc(v.desc)}"><span class="tab-icon">${v.icon}</span><span>${v.label}</span></button>`).join("");
+ $("#tabs").innerHTML=Object.entries(T).map(([k,v])=>`<button class="tab ${S.tab===k?"active":""}" data-tab="${k}" title="${esc(v.desc)}">${v.label}</button>`).join("");
  $("#tabs").onclick=e=>{
   const b=e.target.closest(".tab");if(!b)return;
   S.tab=b.dataset.tab;localStorage.setItem("cf-tab",S.tab);renderTabs();renderCurrent();
@@ -179,8 +181,12 @@ async function loadInventory(){
  const z=$("#zone");z.innerHTML=(d.resources.zones||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join("");
  return d;
 }
+function syncControls(){
+ $("#ranges").style.display=S.tab==="overview"?"none":"flex";
+ $("#zone").hidden=S.tab!=="zone";
+}
 async function renderCurrent(force=false){
- dispose();load();setState("加载中…");
+ syncControls();dispose();load();setState("加载中…");
  try{
   if(force)delete S.cache[S.tab];
   if(S.tab==="overview")await renderOverview();
@@ -197,23 +203,30 @@ async function renderCurrent(force=false){
 }
 async function renderOverview(){
  const d=await loadInventory(),c=d.counts||{};
+ const resources=[
+  {key:"zones",name:"网站",count:c.zones||0,desc:"可监控的 Cloudflare Zone"},
+  {key:"workers",name:"Workers",count:c.workers||0,desc:"账户下的 Worker 脚本"},
+  {key:"d1",name:"D1 数据库",count:c.d1||0,desc:"可用的 D1 数据库"},
+  {key:"kv",name:"KV 存储",count:c.kv||0,desc:"KV Namespace 资源"},
+  {key:"r2",name:"R2 对象存储",count:c.r2||0,desc:"R2 Bucket 资源"},
+  {key:"durableObjects",name:"Durable Objects",count:c.durableObjects||0,desc:"Durable Objects Namespace"}
+ ];
+ const total=resources.reduce((n,x)=>n+x.count,0);
+ const active=resources.filter(x=>x.count>0).length;
+ const rows=resources.map(x=>`<div class="resource-row"><div><div class="resource-name">${x.name}</div><div class="resource-desc">${x.desc}</div></div><div class="resource-right"><strong>${fmt(x.count)}</strong><span class="status-dot"><i></i>已发现</span></div></div>`).join("");
  $("#content").innerHTML=`
  <section class="hero"><div class="hero-title">ACCOUNT OVERVIEW</div>
- <div class="hero-main"><div><h2>资源总览</h2><div class="hero-desc">账户下的 Cloudflare 产品资源一览</div></div><div class="hero-note">仅加载资源清单，不预加载 Analytics</div></div></section>
+ <div class="hero-main"><div><h2>资源总览</h2><div class="hero-desc">账户下的 Cloudflare 资源与监控范围</div></div><div class="hero-note">仅加载资源清单，不预加载 Analytics</div></div></section>
  ${notices(d.warnings)}
  ${metrics([
-  ["Zones",fmt(c.zones)],["Workers",fmt(c.workers)],["D1",fmt(c.d1)],["KV",fmt(c.kv)],
-  ["R2 Buckets",fmt(c.r2)],["Durable Objects",fmt(c.durableObjects)]
+  ["Zones",fmt(c.zones),"网站资源"],["Workers",fmt(c.workers),"Worker 脚本"],["D1",fmt(c.d1),"数据库"],
+  ["KV",fmt(c.kv),"Namespace"],["R2 Buckets",fmt(c.r2),"对象存储"],["Durable Objects",fmt(c.durableObjects),"Namespace"]
  ])}
- <div class="grid charts">
-  ${card("资源分布","overview-pie","当前账户资源数量")}
-  ${card("消息队列","overview-list","Queues 资源")}
- </div>`;
- chart("overview-pie",pieOpt([
-  {name:"Zones",value:c.zones},{name:"Workers",value:c.workers},{name:"D1",value:c.d1},
-  {name:"KV",value:c.kv},{name:"R2",value:c.r2},{name:"DO",value:c.durableObjects}
- ]));
- $("#overview-list").innerHTML=list((d.resources.queues||[]).map(x=>({name:x.name,value:""})));
+ <section class="card overview-status">
+  <div class="card-head"><div><div class="card-title">监控范围</div><div class="card-note">当前账户已发现的资源，不代表资源运行状态</div></div></div>
+  <div class="overview-summary"><div><strong>${fmt(total)}</strong><span>资源总数</span></div><div><strong>${fmt(active)}</strong><span>已启用产品</span></div><div><strong>${fmt(Object.keys(T).length-1)}</strong><span>可监控产品</span></div></div>
+  <div class="resource-list">${rows}</div>
+ </section>`;
 }
 async function renderZone(){
  const inv=await loadInventory(),zones=inv.resources.zones||[];
@@ -276,10 +289,6 @@ function renderProduct(tab,d){
   ["请求",fmt(d.requests)],["子请求",fmt(d.subrequests)],["CPU",fmt(d.cpu)+" ms"],
   ["存储",bytes(d.storage)],["内存 P50",bytes(d.memoryP50)],["内存 P99",bytes(d.memoryP99)]
  ],
- queues:[
-  ["平均积压",fmt(d.backlog)],["积压字节",bytes(d.backlogBytes)],["并发",fmt(d.concurrency)],
-  ["操作数",fmt(d.operations)],["操作字节",bytes(d.operationBytes)],["队列数",fmt(d.queues?.length)]
- ]
  }[tab]||[];
  let body=metrics(common);
  if(tab==="workers")body+=`<div class="grid charts">${card("请求趋势","p1","按小时",true)}${card("错误趋势","p2","按小时",true)}${pieCard("脚本请求","p3")}${pieCard("状态分布","p4")}${card("内存趋势","p5","P50",true)}</div>`;
@@ -288,7 +297,7 @@ function renderProduct(tab,d){
  if(tab==="r2")body+=`<div class="grid charts">${card("请求趋势","p1","按小时",true)}${card("存储趋势","p2","Payload Size",true)}${card("对象趋势","p3","Object Count",true)}${pieCard("操作类型","p4")}${pieCard("状态码","p5")}${pieCard("Bucket","p6")}</div>`;
  if(tab==="do")body+=`<div class="grid charts">${card("请求趋势","p1","按天",true)}${card("内存趋势","p2","P50",true)}${card("CPU 趋势","p3","CPU Time",true)}${card("存储趋势","p4","Stored Bytes",true)}${card("说明","p5","Durable Objects 按命名空间聚合")}</div>`;
 
- $("#content").innerHTML=`<section class="hero"><div class="hero-title">${tab.toUpperCase()}</div><div class="hero-main"><div><h2>${T[tab].icon} ${T[tab].label}</h2><div class="hero-desc">${T[tab].desc}</div></div><div class="hero-note">${S.days} 天 · 按需加载</div></div></section>${notices(d.warnings)}${body}`;
+ $("#content").innerHTML=`<section class="hero"><div class="hero-title">${tab.toUpperCase()}</div><div class="hero-main"><div><h2>${T[tab].label}</h2><div class="hero-desc">${T[tab].desc}</div></div><div class="hero-note">${S.days} 天 · 按需加载</div></div></section>${notices(d.warnings)}${body}`;
  if(tab==="workers"){
   chart("p1",lineOpt(d.trend,"Requests"));chart("p2",lineOpt(d.errorTrend,"Errors"));chart("p3",pieOpt(d.scripts));chart("p4",pieOpt(d.statuses));chart("p5",lineOpt(d.memoryTrend,"Memory P50"));
  }

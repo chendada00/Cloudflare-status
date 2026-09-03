@@ -70,8 +70,7 @@ async function inventory(env){
     d1:rest(`/accounts/${account}/d1/database?per_page=100`,token),
     kv:rest(`/accounts/${account}/storage/kv/namespaces?per_page=100`,token),
     r2:rest(`/accounts/${account}/r2/buckets?per_page=100`,token),
-    durableObjects:rest(`/accounts/${account}/workers/durable_objects/namespaces?per_page=100`,token),
-    queues:rest(`/accounts/${account}/queues?per_page=100`,token)
+    durableObjects:rest(`/accounts/${account}/workers/durable_objects/namespaces?per_page=100`,token)
   };
   const out={},warnings=[];
   for(const[k,p]of Object.entries(jobs)){
@@ -87,8 +86,7 @@ async function inventory(env){
       d1:out.d1.map(x=>({id:x.uuid,name:x.name,size:x.file_size||0})),
       kv:out.kv.map(x=>({id:x.id,name:x.title})),
       r2:out.r2.map(x=>({id:x.name,name:x.name,created:x.creation_date})),
-      durableObjects:out.durableObjects.map(x=>({id:x.id,name:x.name,script:x.script})),
-      queues:out.queues.map(x=>({id:x.queue_id||x.id,name:x.queue_name||x.name}))
+      durableObjects:out.durableObjects.map(x=>({id:x.id,name:x.name,script:x.script}))
     }
   };
 }
