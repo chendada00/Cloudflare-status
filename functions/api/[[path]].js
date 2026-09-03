@@ -274,22 +274,30 @@ async function durableObjects(env,u){
 
 async function zone(env,u){
   const{token,account}=cfg(env);
-  const zoneTag=u.searchParams.get("zone");
-  if(!zoneTag)throw Error("缺少 Zone");
   const period=u.searchParams.get("period")||"24h";
   const requestedDays=Math.min(30,Math.max(1,Number(u.searchParams.get("days")||1)));
   const days=period==="today"?1:requestedDays;
-  const o={days,warnings:[],requests:0,bytes:0,visits:0,cacheHits:0,trend:[],bytesTrend:[],countries:[],statuses:[],colos:[],devices:[],firewall:0,firewallTrend:[],firewallActions:[],firewallSources:[],securityAvailable:false};
+  const o={days,period,warnings:[],requests:0,bytes:0,visits:0,cacheHits:0,trend:[],bytesTrend:[],countries:[],statuses:[],colos:[],devices:[],firewall:0,firewallTrend:[],firewallActions:[],firewallSources:[],securityAvailable:false};
+
+  // 网站页默认统计账户下全部 Zone，不再要求选择单个域名/Zone。
   // HTTP Analytics 对 Zone 查询在较长时间范围存在 1d 限制，因此按天拆分并合并。
   const httpRows=[];
+  const inv=arr(await rest(`/zones?per_page=100`,token));
+  // Cloudflare 的 Zone Analytics 必须明确指定 zoneTag。
+  // 不使用 viewer.zones{} 的无过滤查询，避免账户/接口返回“缺少 Zone”。
   for(let i=0;i<days;i++){
     const end=period==="today"?new Date():new Date(Date.now()-i*86400000);
     const start=period==="today"?new Date(Date.UTC(end.getUTCFullYear(),end.getUTCMonth(),end.getUTCDate())):new Date(end.getTime()-86400000);
-    try{
-      const q=`query($z:String!,$s:Time!,$e:Time!){viewer{zones(filter:{zoneTag:$z}){httpRequestsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e,requestSource:"eyeball"}){count sum{edgeResponseBytes visits} dimensions{datetimeHour clientCountryName clientDeviceType edgeResponseStatus coloCode cacheStatus}}}}}`;
-      const a=(await gql(q,{z:zoneTag,s:start.toISOString(),e:end.toISOString()},token)).viewer.zones?.[0]||{};
-      httpRows.push(...(a.httpRequestsAdaptiveGroups||[]));
-    }catch(e){ if(i===0)o.warnings.push('流量分析：'+e.message); }
+    for(const z of inv){
+      try{
+        const q=`query($z:String!,$s:Time!,$e:Time!){viewer{zones(filter:{zoneTag:$z}){httpRequestsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e,requestSource:"eyeball"}){count sum{edgeResponseBytes visits} dimensions{datetimeHour clientCountryName clientDeviceType edgeResponseStatus coloCode cacheStatus}}}}}`;
+        const data=await gql(q,{z:z.id,s:start.toISOString(),e:end.toISOString()},token);
+        const rows=data.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups||[];
+        httpRows.push(...rows);
+      }catch(e){
+        if(i===0)o.warnings.push(`网站「${z.name||z.id}」：${e.message}`);
+      }
+    }
   }
   o.requests=sum(httpRows,r=>r.count);o.bytes=sum(httpRows,r=>r.sum?.edgeResponseBytes);o.visits=sum(httpRows,r=>r.sum?.visits);
   o.cacheHits=sum(httpRows,r=>r.dimensions?.cacheStatus==="hit"?r.count:0);
@@ -299,16 +307,24 @@ async function zone(env,u){
   o.statuses=group(httpRows,r=>r.dimensions?.edgeResponseStatus,r=>r.count);
   o.colos=group(httpRows,r=>r.dimensions?.coloCode,r=>r.count);
   o.devices=group(httpRows,r=>r.dimensions?.clientDeviceType,r=>r.count);
-  // Firewall Analytics 权限可能因账户/Zone 不同而不可用；不可用时不再把无意义的权限报错展示给用户。
+
+  // Firewall Analytics 权限可能因账户/Zone 不同而不可用；这里逐 Zone 查询，能用的 Zone 汇总展示。
   try{
     const q=`query($z:String!,$s:Time!,$e:Time!){viewer{zones(filter:{zoneTag:$z}){firewallEventsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){count dimensions{datetime action clientCountryName source}}}}}`;
+    const inv=arr(await rest(`/zones?per_page=100`,token));
+    const all=[];
     const now=new Date();
     const securityStart=period==="today"
       ?new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()))
       :new Date(Date.now()-86400000);
-    const a=(await gql(q,{z:zoneTag,s:securityStart.toISOString(),e:now.toISOString()},token)).viewer.zones?.[0]||{};
-    const x=a.firewallEventsAdaptiveGroups||[];
-    o.firewall=sum(x,r=>r.count);o.firewallTrend=trend(x,r=>r.dimensions?.datetime?.slice(0,13),r=>r.count);o.firewallActions=group(x,r=>r.dimensions?.action,r=>r.count);o.firewallSources=group(x,r=>r.dimensions?.source,r=>r.count);o.securityAvailable=true;
+    for(const z of inv){
+      try{
+        const data=await gql(q,{z:z.id,s:securityStart.toISOString(),e:now.toISOString()},token);
+        const rows=data.viewer?.zones?.[0]?.firewallEventsAdaptiveGroups||[];
+        all.push(...rows);
+      }catch{}
+    }
+    o.firewall=sum(all,r=>r.count);o.firewallTrend=trend(all,r=>r.dimensions?.datetime?.slice(0,13),r=>r.count);o.firewallActions=group(all,r=>r.dimensions?.action,r=>r.count);o.firewallSources=group(all,r=>r.dimensions?.source,r=>r.count);o.securityAvailable=all.length>0;
   }catch{}
   return o;
 }
