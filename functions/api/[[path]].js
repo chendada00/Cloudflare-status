@@ -71,8 +71,7 @@ async function inventory(env){
     kv:rest(`/accounts/${account}/storage/kv/namespaces?per_page=100`,token),
     r2:rest(`/accounts/${account}/r2/buckets?per_page=100`,token),
     durableObjects:rest(`/accounts/${account}/workers/durable_objects/namespaces?per_page=100`,token),
-    queues:rest(`/accounts/${account}/queues?per_page=100`,token),
-    workflows:rest(`/accounts/${account}/workflows?per_page=100`,token)
+    queues:rest(`/accounts/${account}/queues?per_page=100`,token)
   };
   const out={},warnings=[];
   for(const[k,p]of Object.entries(jobs)){
@@ -89,8 +88,7 @@ async function inventory(env){
       kv:out.kv.map(x=>({id:x.id,name:x.title})),
       r2:out.r2.map(x=>({id:x.name,name:x.name,created:x.creation_date})),
       durableObjects:out.durableObjects.map(x=>({id:x.id,name:x.name,script:x.script})),
-      queues:out.queues.map(x=>({id:x.queue_id||x.id,name:x.queue_name||x.name})),
-      workflows:out.workflows.map(x=>({id:x.id,name:x.name}))
+      queues:out.queues.map(x=>({id:x.queue_id||x.id,name:x.queue_name||x.name}))
     }
   };
 }
@@ -228,137 +226,90 @@ async function r2(env,u){
 }
 
 async function durableObjects(env,u){
-  const{token,account}=cfg(env),r=range(u,"date");
-  const q=`query($a:String!,$s:Date!,$e:Date!){
-    viewer{accounts(filter:{accountTag:$a}){
-      durableObjectsInvocationsAdaptiveGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
-        sum{requests responseBodySize} dimensions{date}
-      }
-      durableObjectsPeriodicGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
-        sum{cpuTime}
-        quantiles{memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99}
-        dimensions{date}
-      }
-      durableObjectsStorageGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
-        max{storedBytes} dimensions{date}
-      }
-      durableObjectsSubrequestsAdaptiveGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
-        sum{requests} dimensions{date}
-      }
-    }}
-  }`;
-  const a=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
-  const i=a.durableObjectsInvocationsAdaptiveGroups||[],
-        p=a.durableObjectsPeriodicGroups||[],
-        st=a.durableObjectsStorageGroups||[],
-        s=a.durableObjectsSubrequestsAdaptiveGroups||[];
-  return{
-    days:r.days,
-    requests:sum(i,x=>x.sum?.requests),
-    responseBytes:sum(i,x=>x.sum?.responseBodySize),
-    cpu:sum(p,x=>x.sum?.cpuTime),
-    subrequests:sum(s,x=>x.sum?.requests),
-    storage:Math.max(0,...st.map(x=>n(x.max?.storedBytes))),
-    memoryP50:Math.max(0,...p.map(x=>n(x.quantiles?.memoryUsageBytesP50))),
-    memoryP90:Math.max(0,...p.map(x=>n(x.quantiles?.memoryUsageBytesP90))),
-    memoryP99:Math.max(0,...p.map(x=>n(x.quantiles?.memoryUsageBytesP99))),
-    trend:trend(i,x=>x.dimensions?.date,x=>x.sum?.requests),
-    namespaces:[{name:"全部 Durable Objects",value:sum(i,x=>x.sum?.requests)}],
-    memoryTrend:trend(p,x=>x.dimensions?.date,x=>x.quantiles?.memoryUsageBytesP50),
-    cpuTrend:trend(p,x=>x.dimensions?.date,x=>x.sum?.cpuTime),
-    storageTrend:trend(st,x=>x.dimensions?.date,x=>x.max?.storedBytes)
-  };
+  const{token,account}=cfg(env),r=range(u,"date"),o={days:r.days,warnings:[]};
+  const base=(field)=>`query($a:String!,$s:Date!,$e:Date!){viewer{accounts(filter:{accountTag:$a}){durableObjectsInvocationsAdaptiveGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){${field}}}}}`;
+  try{
+    const a=(await gql(base('sum{requests} dimensions{date}'),{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
+    const x=a.durableObjectsInvocationsAdaptiveGroups||[];
+    o.requests=sum(x,r=>r.sum?.requests);
+    o.trend=trend(x,r=>r.dimensions?.date,r=>r.sum?.requests);
+  }catch(e){o.warnings.push('请求统计：'+e.message);o.requests=0;o.trend=[]}
+  try{
+    const a=(await gql(base('sum{responseBodySize} dimensions{date}'),{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
+    o.responseBytes=sum(a.durableObjectsInvocationsAdaptiveGroups||[],r=>r.sum?.responseBodySize);
+  }catch(e){o.warnings.push('响应流量：'+e.message);o.responseBytes=0}
+  try{
+    const q=`query($a:String!,$s:Date!,$e:Date!){viewer{accounts(filter:{accountTag:$a}){durableObjectsPeriodicGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){sum{cpuTime} quantiles{memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99} dimensions{date}}}}}`;
+    const a=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
+    const x=a.durableObjectsPeriodicGroups||[];
+    o.cpu=sum(x,r=>r.sum?.cpuTime);
+    o.memoryP50=Math.max(0,...x.map(r=>n(r.quantiles?.memoryUsageBytesP50)));
+    o.memoryP90=Math.max(0,...x.map(r=>n(r.quantiles?.memoryUsageBytesP90)));
+    o.memoryP99=Math.max(0,...x.map(r=>n(r.quantiles?.memoryUsageBytesP99)));
+    o.memoryTrend=trend(x,r=>r.dimensions?.date,r=>r.quantiles?.memoryUsageBytesP50);
+    o.cpuTrend=trend(x,r=>r.dimensions?.date,r=>r.sum?.cpuTime);
+  }catch(e){o.warnings.push('CPU/内存：'+e.message);o.cpu=0;o.memoryP50=0;o.memoryP90=0;o.memoryP99=0;o.memoryTrend=[];o.cpuTrend=[]}
+  try{
+    const q=`query($a:String!,$s:Date!,$e:Date!){viewer{accounts(filter:{accountTag:$a}){durableObjectsStorageGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){max{storedBytes} dimensions{date}}}}}`;
+    const a=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
+    const x=a.durableObjectsStorageGroups||[];
+    o.storage=Math.max(0,...x.map(r=>n(r.max?.storedBytes)));
+    o.storageTrend=trend(x,r=>r.dimensions?.date,r=>r.max?.storedBytes);
+  }catch(e){o.warnings.push('存储：'+e.message);o.storage=0;o.storageTrend=[]}
+  try{
+    const q=`query($a:String!,$s:Date!,$e:Date!){viewer{accounts(filter:{accountTag:$a}){durableObjectsSubrequestsAdaptiveGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){sum{requests} dimensions{date}}}}}`;
+    const a=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
+    const x=a.durableObjectsSubrequestsAdaptiveGroups||[];
+    o.subrequests=sum(x,r=>r.sum?.requests);
+  }catch(e){o.warnings.push('子请求统计：'+e.message);o.subrequests=0}
+  o.namespaces=[];
+  return o;
 }
 
 async function zone(env,u){
-  const{token}=cfg(env),zoneTag=u.searchParams.get("zone");
+  const{token,account}=cfg(env);
+  const zoneTag=u.searchParams.get("zone");
   if(!zoneTag)throw Error("缺少 Zone");
-  const r=range(u),o={days:r.days,warnings:[]};
-
+  const days=Math.min(30,Math.max(1,Number(u.searchParams.get("days")||1)));
+  const o={days,warnings:[],requests:0,bytes:0,visits:0,cacheHits:0,trend:[],bytesTrend:[],countries:[],statuses:[],colos:[],devices:[],firewall:0,firewallTrend:[],firewallActions:[],firewallSources:[],securityAvailable:false};
+  // HTTP Analytics 对 Zone 查询在较长时间范围存在 1d 限制，因此按天拆分并合并。
+  const httpRows=[];
+  for(let i=0;i<days;i++){
+    const end=new Date(Date.now()-i*86400000);
+    const start=new Date(end.getTime()-86400000);
+    try{
+      const q=`query($z:String!,$s:Time!,$e:Time!){viewer{zones(filter:{zoneTag:$z}){httpRequestsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e,requestSource:"eyeball"}){count sum{edgeResponseBytes visits} dimensions{datetimeHour clientCountryName clientDeviceType edgeResponseStatus coloCode cacheStatus}}}}}`;
+      const a=(await gql(q,{z:zoneTag,s:start.toISOString(),e:end.toISOString()},token)).viewer.zones?.[0]||{};
+      httpRows.push(...(a.httpRequestsAdaptiveGroups||[]));
+    }catch(e){ if(i===0)o.warnings.push('流量分析：'+e.message); }
+  }
+  o.requests=sum(httpRows,r=>r.count);o.bytes=sum(httpRows,r=>r.sum?.edgeResponseBytes);o.visits=sum(httpRows,r=>r.sum?.visits);
+  o.cacheHits=sum(httpRows,r=>r.dimensions?.cacheStatus==="hit"?r.count:0);
+  o.trend=trend(httpRows,r=>r.dimensions?.datetimeHour,r=>r.count);
+  o.bytesTrend=trend(httpRows,r=>r.dimensions?.datetimeHour,r=>r.sum?.edgeResponseBytes);
+  o.countries=group(httpRows,r=>r.dimensions?.clientCountryName,r=>r.count);
+  o.statuses=group(httpRows,r=>r.dimensions?.edgeResponseStatus,r=>r.count);
+  o.colos=group(httpRows,r=>r.dimensions?.coloCode,r=>r.count);
+  o.devices=group(httpRows,r=>r.dimensions?.clientDeviceType,r=>r.count);
+  // Firewall Analytics 权限可能因账户/Zone 不同而不可用；不可用时不再把无意义的权限报错展示给用户。
   try{
-    const q=`query($z:String!,$s:Time!,$e:Time!){
-      viewer{zones(filter:{zoneTag:$z}){
-        httpRequestsAdaptiveGroups(limit:10000,filter:{
-          datetime_geq:$s,datetime_leq:$e,requestSource:"eyeball"
-        }){
-          count sum{edgeResponseBytes visits}
-          dimensions{datetimeHour clientCountryName clientDeviceType edgeResponseStatus coloCode cacheStatus}
-        }
-      }}
-    }`;
-    const x=(await gql(q,{z:zoneTag,s:r.start,e:r.end},token))
-      .viewer.zones?.[0]?.httpRequestsAdaptiveGroups||[];
-    Object.assign(o,{
-      requests:sum(x,r=>r.count),
-      bytes:sum(x,r=>r.sum?.edgeResponseBytes),
-      visits:sum(x,r=>r.sum?.visits),
-      cacheHits:sum(x,r=>r.dimensions?.cacheStatus==="hit"?r.count:0),
-      trend:trend(x,r=>r.dimensions?.datetimeHour,r=>r.count),
-      bytesTrend:trend(x,r=>r.dimensions?.datetimeHour,r=>r.sum?.edgeResponseBytes),
-      countries:group(x,r=>r.dimensions?.clientCountryName,r=>r.count),
-      statuses:group(x,r=>r.dimensions?.edgeResponseStatus,r=>r.count),
-      colos:group(x,r=>r.dimensions?.coloCode,r=>r.count),
-      devices:group(x,r=>r.dimensions?.clientDeviceType,r=>r.count)
-    });
-  }catch(e){o.warnings.push("流量分析："+e.message)}
-
-  try{
-    const q=`query($z:String!,$s:Time!,$e:Time!){
-      viewer{zones(filter:{zoneTag:$z}){
-        firewallEventsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
-          count dimensions{datetime action clientCountryName source}
-        }
-      }}
-    }`;
-    const x=(await gql(q,{z:zoneTag,s:r.start,e:r.end},token))
-      .viewer.zones?.[0]?.firewallEventsAdaptiveGroups||[];
-    Object.assign(o,{
-      firewall:sum(x,r=>r.count),
-      firewallTrend:trend(x,r=>r.dimensions?.datetime?.slice(0,13),r=>r.count),
-      firewallActions:group(x,r=>r.dimensions?.action,r=>r.count),
-      firewallSources:group(x,r=>r.dimensions?.source,r=>r.count)
-    });
-  }catch(e){o.warnings.push("安全事件："+e.message)}
+    const q=`query($z:String!,$s:Time!,$e:Time!){viewer{zones(filter:{zoneTag:$z}){firewallEventsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){count dimensions{datetime action clientCountryName source}}}}}`;
+    const a=(await gql(q,{z:zoneTag,s:new Date(Date.now()-86400000).toISOString(),e:new Date().toISOString()},token)).viewer.zones?.[0]||{};
+    const x=a.firewallEventsAdaptiveGroups||[];
+    o.firewall=sum(x,r=>r.count);o.firewallTrend=trend(x,r=>r.dimensions?.datetime?.slice(0,13),r=>r.count);o.firewallActions=group(x,r=>r.dimensions?.action,r=>r.count);o.firewallSources=group(x,r=>r.dimensions?.source,r=>r.count);o.securityAvailable=true;
+  }catch{}
   return o;
 }
 
 async function queues(env,u){
   const{token,account}=cfg(env),r=range(u),o={days:r.days,warnings:[]};
+  try{const x=arr(await rest(`/accounts/${account}/queues?per_page=100`,token));o.queues=x.map(q=>({id:q.queue_id||q.id,name:q.queue_name||q.name}));}catch(e){o.queues=[];o.warnings.push('队列列表：'+e.message)}
   try{
-    const x=arr(await rest(`/accounts/${account}/queues?per_page=100`,token));
-    o.queues=x.map(q=>({id:q.queue_id||q.id,name:q.queue_name||q.name}));
-  }catch(e){o.warnings.push("队列列表："+e.message)}
-  try{
-    const q=`query($a:String!,$s:Time!,$e:Time!){
-      viewer{accounts(filter:{accountTag:$a}){
-        queueBacklogAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
-          avg{messages bytes} dimensions{datetimeHour queueID}
-        }
-        queueConsumerMetricsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
-          avg{concurrency} dimensions{datetimeHour queueID}
-        }
-        queueMessageOperationsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
-          count sum{bytes} dimensions{datetimeMinute queueID actionType}
-        }
-      }}
-    }`;
+    const q=`query($a:String!,$s:Time!,$e:Time!){viewer{accounts(filter:{accountTag:$a}){queueBacklogAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){avg{messages bytes} dimensions{datetimeHour}} queueConsumerMetricsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){avg{concurrency} dimensions{datetimeHour}} queueMessageOperationsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){count sum{bytes} dimensions{datetimeMinute actionType}}}}}`;
     const a=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
-    const b=a.queueBacklogAdaptiveGroups||[],
-          c=a.queueConsumerMetricsAdaptiveGroups||[],
-          m=a.queueMessageOperationsAdaptiveGroups||[];
-    Object.assign(o,{
-      backlog:avg(b,x=>x.avg?.messages),
-      backlogBytes:avg(b,x=>x.avg?.bytes),
-      concurrency:avg(c,x=>x.avg?.concurrency),
-      operations:sum(m,x=>x.count),
-      operationBytes:sum(m,x=>x.sum?.bytes),
-      backlogTrend:trend(b,x=>x.dimensions?.datetimeHour,x=>x.avg?.messages),
-      concurrencyTrend:trend(c,x=>x.dimensions?.datetimeHour,x=>x.avg?.concurrency),
-      operationsTrend:trend(m,x=>x.dimensions?.datetimeMinute,x=>x.count),
-      actions:group(m,x=>x.dimensions?.actionType,x=>x.count),
-      queueUsage:group(m,x=>x.dimensions?.queueID,x=>x.count)
-    });
-  }catch(e){o.warnings.push("队列分析："+e.message)}
+    const b=a.queueBacklogAdaptiveGroups||[],c=a.queueConsumerMetricsAdaptiveGroups||[],m=a.queueMessageOperationsAdaptiveGroups||[];
+    Object.assign(o,{backlog:avg(b,x=>x.avg?.messages),backlogBytes:avg(b,x=>x.avg?.bytes),concurrency:avg(c,x=>x.avg?.concurrency),operations:sum(m,x=>x.count),operationBytes:sum(m,x=>x.sum?.bytes),backlogTrend:trend(b,x=>x.dimensions?.datetimeHour,x=>x.avg?.messages),concurrencyTrend:trend(c,x=>x.dimensions?.datetimeHour,x=>x.avg?.concurrency),operationsTrend:trend(m,x=>x.dimensions?.datetimeMinute,x=>x.count),actions:group(m,x=>x.dimensions?.actionType,x=>x.count)});
+  }catch(e){o.warnings.push('队列分析：'+e.message)}
   return o;
 }
 
@@ -405,7 +356,6 @@ export async function onRequest({request,env}){
     else if(p==="do"||p==="durable-objects")d=await durableObjects(env,u);
     else if(p==="zone")d=await zone(env,u);
     else if(p==="queues")d=await queues(env,u);
-    else if(p==="workflows")d=await workflows(env,u);
     else if(p==="health")d={ok:true,time:new Date().toISOString()};
     else return fail("未知 API："+p,404);
     return ok(d);
