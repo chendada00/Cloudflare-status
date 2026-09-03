@@ -232,18 +232,18 @@ async function durableObjects(env,u){
   const q=`query($a:String!,$s:Date!,$e:Date!){
     viewer{accounts(filter:{accountTag:$a}){
       durableObjectsInvocationsAdaptiveGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
-        sum{requests responseBodySize} dimensions{date namespaceName}
+        sum{requests responseBodySize} dimensions{date}
       }
       durableObjectsPeriodicGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
         sum{cpuTime}
         quantiles{memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99}
-        dimensions{date namespaceName}
+        dimensions{date}
       }
       durableObjectsStorageGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
-        max{storedBytes} dimensions{date namespaceName}
+        max{storedBytes} dimensions{date}
       }
       durableObjectsSubrequestsAdaptiveGroups(limit:10000,filter:{date_geq:$s,date_leq:$e}){
-        sum{requests} dimensions{date namespaceName}
+        sum{requests} dimensions{date}
       }
     }}
   }`;
@@ -263,7 +263,7 @@ async function durableObjects(env,u){
     memoryP90:Math.max(0,...p.map(x=>n(x.quantiles?.memoryUsageBytesP90))),
     memoryP99:Math.max(0,...p.map(x=>n(x.quantiles?.memoryUsageBytesP99))),
     trend:trend(i,x=>x.dimensions?.date,x=>x.sum?.requests),
-    namespaces:group(i,x=>x.dimensions?.namespaceName,x=>x.sum?.requests),
+    namespaces:[{name:"全部 Durable Objects",value:sum(i,x=>x.sum?.requests)}],
     memoryTrend:trend(p,x=>x.dimensions?.date,x=>x.quantiles?.memoryUsageBytesP50),
     cpuTrend:trend(p,x=>x.dimensions?.date,x=>x.sum?.cpuTime),
     storageTrend:trend(st,x=>x.dimensions?.date,x=>x.max?.storedBytes)
@@ -331,7 +331,7 @@ async function queues(env,u){
   try{
     const q=`query($a:String!,$s:Time!,$e:Time!){
       viewer{accounts(filter:{accountTag:$a}){
-        queuesBacklogAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
+        queueBacklogAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
           avg{messages bytes} dimensions{datetimeHour queueID}
         }
         queueConsumerMetricsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){
@@ -343,7 +343,7 @@ async function queues(env,u){
       }}
     }`;
     const a=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
-    const b=a.queuesBacklogAdaptiveGroups||[],
+    const b=a.queueBacklogAdaptiveGroups||[],
           c=a.queueConsumerMetricsAdaptiveGroups||[],
           m=a.queueMessageOperationsAdaptiveGroups||[];
     Object.assign(o,{
@@ -369,7 +369,7 @@ async function workflows(env,u){
       viewer{accounts(filter:{accountTag:$a}){
         workflowsAdaptiveGroups(limit:10000,filter:{datetimeHour_geq:$s,datetimeHour_leq:$e}){
           count sum{wallTime}
-          dimensions{datetimeHour workflowName eventType stepCount}
+          dimensions{datetimeHour workflowName eventType}
         }
       }}
     }`;
