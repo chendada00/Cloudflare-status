@@ -64,8 +64,6 @@ html.dark{--bg:#090f18;--surface:rgba(15,23,42,.72);--surface-solid:#0f172a;--su
       <button class="range" data-period="14d" data-days="14">14 天</button>
       <button class="range" data-period="30d" data-days="30">30 天</button>
     </div>
-    <select id="zone" hidden></select>
-    
   </section>
 
   <main id="content"></main>
@@ -75,7 +73,7 @@ html.dark{--bg:#090f18;--surface:rgba(15,23,42,.72);--surface-solid:#0f172a;--su
 <script>
 const T={
  overview:{label:"概览",desc:"账户资源与整体状态"},
- zone:{label:"网站",desc:"访问流量、缓存与安全"},
+ zone:{label:"网站",desc:"全部网站的访问流量、缓存、地域与状态码"},
  workers:{label:"Workers",desc:"请求、错误、CPU 与内存"},
  d1:{label:"D1 数据库",desc:"查询、读写行数与延迟"},
  kv:{label:"KV 存储",desc:"读写操作、Key 与容量"},
@@ -182,14 +180,12 @@ function renderTabs(){
 async function loadInventory(){
  const d=S.cache.inventory||await api("/api/inventory");
  S.cache.inventory=d;
- const z=$("#zone");z.innerHTML=(d.resources.zones||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join("");
  return d;
 }
 function syncControls(){
  const controls=$(".controls");
  if(controls)controls.style.display=S.tab==="overview"?"none":"flex";
  $("#ranges").style.display=S.tab==="overview"?"none":"flex";
- $("#zone").hidden=S.tab!=="zone";
  document.querySelectorAll(".range").forEach(x=>x.classList.toggle("active",(x.dataset.period||"")===(S.period||"today")));
 }
 async function renderCurrent(force=false){
@@ -238,18 +234,15 @@ async function renderOverview(){
 }
 async function renderZone(){
  const inv=await loadInventory(),zones=inv.resources.zones||[];
- $("#zone").hidden=false;
- if(!$("#zone").value&&zones.length)$("#zone").value=zones[0].id;
  if(!zones.length){
-  $("#content").innerHTML=`<div class="error">当前账户没有可用 Zone。</div>`;return;
+  $("#content").innerHTML=`<div class="error">当前账户没有可用网站。</div>`;return;
  }
- const id=$("#zone").value;
- const key=`zone:${id}:${S.days}`;
- const d=S.cache[key]||await api(`/api/zone?zone=${encodeURIComponent(id)}&days=${S.days}`);
+ const key=`zone:all:${S.period}:${S.days}`;
+ const d=S.cache[key]||await api(`/api/zone?days=${S.days}&period=${encodeURIComponent(S.period)}`);
  S.cache[key]=d;
  $("#content").innerHTML=`
  <section class="hero"><div class="hero-title">WEBSITE ANALYTICS</div>
- <div class="hero-main"><div><h2>${esc(zones.find(x=>x.id===id)?.name||"Zone")}</h2><div class="hero-desc">访问流量、缓存、地域与状态码</div></div><div class="hero-note">${S.days} 天</div></div></section>
+ <div class="hero-main"><div><h2>全部网站</h2><div class="hero-desc">${esc(T.zone.desc)}</div></div><div class="hero-note">${fmt(zones.length)} 个网站 · ${S.period==="today"?"当天":S.period==="24h"?"24 小时":S.days+" 天"}</div></div></section>
  ${notices(d.warnings)}
  ${metrics([
   ["请求数",fmt(d.requests)],["流量",bytes(d.bytes)],["访问",fmt(d.visits)],
@@ -275,7 +268,6 @@ async function renderZone(){
  chart("zone-fw-action",pieOpt(d.firewallActions));
 }
 function renderProduct(tab,d){
- $("#zone").hidden=true;
  const common={
  workers:[
   ["请求",fmt(d.requests)],["错误",fmt(d.errors)],["子请求",fmt(d.subrequests)],
@@ -325,11 +317,10 @@ function renderProduct(tab,d){
 }
 $("#ranges").onclick=e=>{
  const b=e.target.closest(".range");if(!b)return;
- S.days=Number(b.dataset.days);localStorage.setItem("cf-days-v7",S.days);
+ S.days=Number(b.dataset.days);S.period=b.dataset.period||"24h";localStorage.setItem("cf-days-v7",S.days);localStorage.setItem("cf-period-v12",S.period);
  document.querySelectorAll(".range").forEach(x=>x.classList.toggle("active",x===b));
  S.cache={};renderCurrent();
 };
-$("#zone").onchange=()=>renderCurrent(true);
 $("#tabs").addEventListener("click",e=>{if(e.target.closest("#refresh")){S.cache={};renderCurrent(true)}});
 $("#theme").onclick=()=>{
  const dark=!document.documentElement.classList.contains("dark");
@@ -338,7 +329,7 @@ $("#theme").onclick=()=>{
 };
 if(localStorage.getItem("cf-theme")==="dark")document.documentElement.classList.add("dark");
 renderTabs();
-document.querySelectorAll(".range").forEach(x=>x.classList.toggle("active",Number(x.dataset.days)===S.days));
+document.querySelectorAll(".range").forEach(x=>x.classList.toggle("active",(x.dataset.period||"")===(S.period||"today")));
 renderCurrent();
 </script>
 </body>
