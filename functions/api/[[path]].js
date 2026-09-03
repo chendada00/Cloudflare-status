@@ -55,11 +55,19 @@ async function gql(query,variables,token){
   return d.data;
 }
 function range(u,kind="time"){
+  const period=u.searchParams.get("period")||"24h";
   const days=Math.min(30,Math.max(1,Number(u.searchParams.get("days")||1)));
-  const end=new Date(),start=new Date(end-days*86400000);
+  const now=new Date();
+  if(period==="today"){
+    const start=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()));
+    return kind==="date"
+      ?{days:1,start:start.toISOString().slice(0,10),end:start.toISOString().slice(0,10),period}
+      :{days:1,start:start.toISOString(),end:now.toISOString(),period};
+  }
+  const start=new Date(now-days*86400000);
   return kind==="date"
-    ?{days,start:start.toISOString().slice(0,10),end:end.toISOString().slice(0,10)}
-    :{days,start:start.toISOString(),end:end.toISOString()};
+    ?{days,start:start.toISOString().slice(0,10),end:now.toISOString().slice(0,10),period}
+    :{days,start:start.toISOString(),end:now.toISOString(),period};
 }
 
 async function inventory(env){
@@ -268,13 +276,15 @@ async function zone(env,u){
   const{token,account}=cfg(env);
   const zoneTag=u.searchParams.get("zone");
   if(!zoneTag)throw Error("缺少 Zone");
-  const days=Math.min(30,Math.max(1,Number(u.searchParams.get("days")||1)));
+  const period=u.searchParams.get("period")||"24h";
+  const requestedDays=Math.min(30,Math.max(1,Number(u.searchParams.get("days")||1)));
+  const days=period==="today"?1:requestedDays;
   const o={days,warnings:[],requests:0,bytes:0,visits:0,cacheHits:0,trend:[],bytesTrend:[],countries:[],statuses:[],colos:[],devices:[],firewall:0,firewallTrend:[],firewallActions:[],firewallSources:[],securityAvailable:false};
   // HTTP Analytics 对 Zone 查询在较长时间范围存在 1d 限制，因此按天拆分并合并。
   const httpRows=[];
   for(let i=0;i<days;i++){
-    const end=new Date(Date.now()-i*86400000);
-    const start=new Date(end.getTime()-86400000);
+    const end=period==="today"?new Date():new Date(Date.now()-i*86400000);
+    const start=period==="today"?new Date(Date.UTC(end.getUTCFullYear(),end.getUTCMonth(),end.getUTCDate())):new Date(end.getTime()-86400000);
     try{
       const q=`query($z:String!,$s:Time!,$e:Time!){viewer{zones(filter:{zoneTag:$z}){httpRequestsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e,requestSource:"eyeball"}){count sum{edgeResponseBytes visits} dimensions{datetimeHour clientCountryName clientDeviceType edgeResponseStatus coloCode cacheStatus}}}}}`;
       const a=(await gql(q,{z:zoneTag,s:start.toISOString(),e:end.toISOString()},token)).viewer.zones?.[0]||{};
@@ -292,7 +302,11 @@ async function zone(env,u){
   // Firewall Analytics 权限可能因账户/Zone 不同而不可用；不可用时不再把无意义的权限报错展示给用户。
   try{
     const q=`query($z:String!,$s:Time!,$e:Time!){viewer{zones(filter:{zoneTag:$z}){firewallEventsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){count dimensions{datetime action clientCountryName source}}}}}`;
-    const a=(await gql(q,{z:zoneTag,s:new Date(Date.now()-86400000).toISOString(),e:new Date().toISOString()},token)).viewer.zones?.[0]||{};
+    const now=new Date();
+    const securityStart=period==="today"
+      ?new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()))
+      :new Date(Date.now()-86400000);
+    const a=(await gql(q,{z:zoneTag,s:securityStart.toISOString(),e:now.toISOString()},token)).viewer.zones?.[0]||{};
     const x=a.firewallEventsAdaptiveGroups||[];
     o.firewall=sum(x,r=>r.count);o.firewallTrend=trend(x,r=>r.dimensions?.datetime?.slice(0,13),r=>r.count);o.firewallActions=group(x,r=>r.dimensions?.action,r=>r.count);o.firewallSources=group(x,r=>r.dimensions?.source,r=>r.count);o.securityAvailable=true;
   }catch{}
