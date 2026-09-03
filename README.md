@@ -1,25 +1,19 @@
-# Cloudflare Monitor V6
+# Cloudflare Monitor V7
 
-基于 Cloudflare GraphQL Analytics API 的 Cloudflare 监控面板，页面视觉参考 EdgeOne Status。
+这版按 `edgeone-status` 的核心交互思路重新整理，但没有继续堆叠玻璃拟态和大量装饰。
 
-## 本版修复
+## 主要改动
 
-- Durable Objects 不再请求当前账户 Schema 中不存在的 `namespaceId` 输出字段。
-- Workflows 不再请求当前账户 Schema 中不存在的 `stepName` 输出字段；改用官方可用的 Workflow / Event Type 数据。
-- Queues 使用当前官方的 `queuesBacklogAdaptiveGroups` 和 `queueID`。
-- Workers 增加 Memory P50/P90/P99 与 Memory 趋势。
-- Durable Objects 增加 Memory P50/P90/P99 趋势。
-- 默认时间范围为 1 天。
-- 刷新按钮移动到横向页签右侧。
-- 页签和内容先显示骨架框架，再异步填充数据。
-- 删除页面上的“懒加载”等开发实现说明。
-- 删除 Metric / Chart 卡片顶部彩色装饰条。
-- 使用系统中文字体，降低标题、数字和深色模式字体粗细。
-- ECharts 字体和坐标轴字号降低，减少视觉拥挤。
-
-## Cloudflare GraphQL
-
-Cloudflare GraphQL Analytics Schema 是动态的。不同账户、Zone、套餐可能暴露不同 Dataset / Field；项目应优先以实际账户 Introspection / Settings 为准。
+- 概览页只请求资源清单，不打开页面就请求所有 Analytics。
+- 每个产品页签独立请求，切换页签才请求数据。
+- Zone 页签支持选择 Zone。
+- Workers / D1 / KV / R2 / Durable Objects / Queues / Workflows 均独立处理。
+- Zone 的 HTTP Analytics 与 Firewall Analytics 分开请求：其中一个数据集不可用时，另一个仍能显示。
+- Queues / Workflows Analytics 失败时不再让整个页签白屏，而是显示警告和能取得的资源列表。
+- 去掉大面积渐变、玻璃卡片和过重阴影，改成更接近 Cloudflare Dashboard 的简洁风格。
+- 默认时间范围为 24 小时，最多 30 天。
+- 增加 skeleton 加载、空数据状态、错误提示、深色模式。
+- API 统一由 `functions/api/[[path]].js` 路由，避免两个 wildcard Function 同时维护造成路由行为不一致。
 
 ## 部署
 
@@ -28,9 +22,18 @@ Cloudflare Pages：
 - Framework preset: None
 - Build command: 留空
 - Build output directory: `.`
+- Environment variables:
+  - `CLOUDFLARE_API_TOKEN`
+  - `CLOUDFLARE_ACCOUNT_ID`
 
-环境变量：
+API Token 至少需要对应 Analytics Read 权限，以及读取资源列表所需的账户权限。
 
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
-- `SITE_NAME`（可选）
+## 替换步骤
+
+1. 用本目录的 `index.html` 替换仓库根目录 `index.html`。
+2. 用本目录的 `functions/api/[[path]].js` 替换原文件。
+3. 删除旧的 `functions/api/[[default]].js`，不要保留两个重复的 API wildcard。
+4. 保留 `.dev.vars.example` 等配置文件。
+5. 提交并重新部署 Pages。
+
+Cloudflare GraphQL Analytics 的 schema 会随产品、账户和套餐变化，因此代码采用“单产品独立请求 + 局部 warnings”的策略，而不是让一个总 GraphQL 查询失败后整页不可用。
