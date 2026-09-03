@@ -1,4 +1,4 @@
-# Cloudflare Monitor V11
+# Cloudflare Monitor V12
 
 这版按 `edgeone-status` 的核心交互思路重新整理，但没有继续堆叠玻璃拟态和大量装饰。
 
@@ -6,14 +6,16 @@
 
 - 概览页只请求资源清单，不打开页面就请求所有 Analytics；时间范围在概览页自动隐藏。
 - 概览页移除无实际意义的资源饼图和 Queues 空白卡片，改为资源总数、启用产品数和资源清单。
-- 页签去掉 Emoji 图标，保持简洁文字导航；刷新按钮移动到页面底部。
+- 页签使用 EdgeOne 风格的小圆点；刷新按钮紧跟在页签之后，而不是放到页面最底部。
 - 每个产品页签独立请求，切换页签才请求数据。
 - Zone 页签支持选择 Zone。
 - Workers / D1 / KV / R2 / Durable Objects 均独立处理；Queues / Workflows 不再放入导航与概览。
+- Durable Objects 页面删除“当前接口按账户 / 命名空间……”这类没有实际监控价值的说明卡片。
 - Zone 的 HTTP Analytics 与 Firewall Analytics 分开请求：其中一个数据集不可用时，另一个仍能显示。
 - 去掉大面积渐变、玻璃卡片和过重阴影，改成更接近 Cloudflare Dashboard 的简洁风格。
 - 默认时间范围为 24 小时，最多 30 天。
-- 加载改为 EdgeOne 风格的小圆点脉冲动画，保留空数据状态、错误提示、深色模式。
+- 加载状态放在页签下方，用“小圆点 + 加载中”显示；内容区改为局部 Skeleton 光影扫过动画，不再用覆盖整块页面的大型加载动画。
+- 页面底部增加备案信息查询入口。
 - API 统一由 `functions/api/[[path]].js` 路由，避免两个 wildcard Function 同时维护造成路由行为不一致。
 
 ## 部署
