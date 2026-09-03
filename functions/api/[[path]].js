@@ -301,18 +301,6 @@ async function zone(env,u){
   return o;
 }
 
-async function queues(env,u){
-  const{token,account}=cfg(env),r=range(u),o={days:r.days,warnings:[]};
-  try{const x=arr(await rest(`/accounts/${account}/queues?per_page=100`,token));o.queues=x.map(q=>({id:q.queue_id||q.id,name:q.queue_name||q.name}));}catch(e){o.queues=[];o.warnings.push('队列列表：'+e.message)}
-  try{
-    const q=`query($a:String!,$s:Time!,$e:Time!){viewer{accounts(filter:{accountTag:$a}){queueBacklogAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){avg{messages bytes} dimensions{datetimeHour}} queueConsumerMetricsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){avg{concurrency} dimensions{datetimeHour}} queueMessageOperationsAdaptiveGroups(limit:10000,filter:{datetime_geq:$s,datetime_leq:$e}){count sum{bytes} dimensions{datetimeMinute actionType}}}}}`;
-    const a=(await gql(q,{a:account,s:r.start,e:r.end},token)).viewer.accounts?.[0]||{};
-    const b=a.queueBacklogAdaptiveGroups||[],c=a.queueConsumerMetricsAdaptiveGroups||[],m=a.queueMessageOperationsAdaptiveGroups||[];
-    Object.assign(o,{backlog:avg(b,x=>x.avg?.messages),backlogBytes:avg(b,x=>x.avg?.bytes),concurrency:avg(c,x=>x.avg?.concurrency),operations:sum(m,x=>x.count),operationBytes:sum(m,x=>x.sum?.bytes),backlogTrend:trend(b,x=>x.dimensions?.datetimeHour,x=>x.avg?.messages),concurrencyTrend:trend(c,x=>x.dimensions?.datetimeHour,x=>x.avg?.concurrency),operationsTrend:trend(m,x=>x.dimensions?.datetimeMinute,x=>x.count),actions:group(m,x=>x.dimensions?.actionType,x=>x.count)});
-  }catch(e){o.warnings.push('队列分析：'+e.message)}
-  return o;
-}
-
 async function workflows(env,u){
   const{token,account}=cfg(env),r=range(u),o={days:r.days,warnings:[]};
   try{
@@ -355,7 +343,6 @@ export async function onRequest({request,env}){
     else if(p==="r2")d=await r2(env,u);
     else if(p==="do"||p==="durable-objects")d=await durableObjects(env,u);
     else if(p==="zone")d=await zone(env,u);
-    else if(p==="queues")d=await queues(env,u);
     else if(p==="health")d={ok:true,time:new Date().toISOString()};
     else return fail("未知 API："+p,404);
     return ok(d);

@@ -29,7 +29,8 @@ button,select{font:inherit}button{cursor:pointer}
 .nav{display:flex;align-items:center;gap:4px;overflow:auto;padding:5px;margin-bottom:12px;border:1px solid rgba(226,232,240,.8);background:rgba(255,255,255,.66);border-radius:16px;box-shadow:0 16px 45px -38px rgba(15,23,42,.42);scrollbar-width:none;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}.nav::-webkit-scrollbar{display:none}.tab{position:relative;border:0;background:transparent;color:#64748b;padding:9px 13px;border-radius:11px;white-space:nowrap;font-size:13px;font-weight:700;transition:color .2s ease,background .2s ease,transform .2s ease}.tab:hover{background:rgba(255,255,255,.78);color:#0f172a;transform:translateY(-1px)}.tab-icon{display:inline-flex;align-items:center;justify-content:center;margin-right:5px;font-size:14px;filter:saturate(1.15)}.tab.active{color:#fff;background:linear-gradient(135deg,#0f172a,#334155);box-shadow:0 12px 26px -19px rgba(15,23,42,.8)}
 .controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid rgba(226,232,240,.78);background:rgba(255,255,255,.64);border-radius:16px;margin-bottom:15px;box-shadow:0 16px 44px -40px rgba(15,23,42,.42);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}.ranges{display:flex;gap:4px}.range{border:0;background:transparent;color:#64748b;border-radius:10px;padding:7px 11px;font-weight:700;font-size:12px;transition:all .18s ease}.range:hover{background:rgba(255,255,255,.85);color:#0f172a}.range.active{background:#e0f2fe;color:#0369a1;box-shadow:inset 0 0 0 1px rgba(14,165,233,.18)}select{min-width:270px;border:1px solid var(--line);background:rgba(255,255,255,.84);border-radius:10px;padding:8px 10px;color:#334155;outline:none}.state{font-size:12px;color:#94a3b8}
 .hero{position:relative;overflow:hidden;background:rgba(255,255,255,.72);border:1px solid rgba(226,232,240,.82);border-radius:22px;padding:21px;margin-bottom:14px;box-shadow:var(--shadow);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}.hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.06) 1px,transparent 1px);background-size:26px 26px;mask-image:linear-gradient(90deg,#000,transparent 82%);pointer-events:none}.hero-title{position:relative;font-size:12px;color:#94a3b8;font-weight:800;letter-spacing:.13em}.hero-main{position:relative;display:flex;align-items:end;justify-content:space-between;gap:20px;margin-top:7px}.hero h2{font-size:28px;margin:0;letter-spacing:-.04em}.hero-note{font-size:12px;color:#94a3b8}.hero-desc{margin-top:5px;font-size:12px;color:#64748b}.small-empty{height:230px;padding:20px;text-align:center}
-.grid{display:grid;gap:12px}.metrics{grid-template-columns:repeat(6,minmax(0,1fr))}.metric{position:relative;overflow:hidden;background:rgba(255,255,255,.72);border:1px solid rgba(226,232,240,.82);border-radius:17px;padding:15px;box-shadow:0 18px 50px -42px rgba(15,23,42,.38);min-width:0;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.metric::after,.card::after{content:"";position:absolute;inset:auto -20% -70% 20%;height:130px;background:radial-gradient(circle,rgba(56,189,248,.10),transparent 68%);opacity:0;transition:opacity .25s ease;pointer-events:none}.metric:hover,.card:hover{transform:translateY(-3px);border-color:rgba(56,189,248,.38);box-shadow:0 30px 72px -48px rgba(15,23,42,.48)}.metric:hover::after,.card:hover::after{opacity:1}.metric-label{font-size:12px;color:#64748b}.metric-value{font-size:22px;font-weight:800;margin-top:7px;letter-spacing:-.035em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.metric-sub{font-size:11px;color:#94a3b8;margin-top:4px}
+.grid{display:grid;gap:12px}.metrics{grid-template-columns:repeat(6,minmax(0,1fr))}.metric-top{display:flex;align-items:center;justify-content:space-between;gap:12px}.metric-icon{width:42px;height:42px;flex:none;border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--mc);background:var(--mb);transition:transform .25s ease,box-shadow .25s ease}.metric-icon svg{width:21px;height:21px}.metric:hover .metric-icon{transform:translateY(-2px) rotate(-3deg);box-shadow:0 8px 20px var(--mb)}
+.metric{position:relative;overflow:hidden;background:rgba(255,255,255,.72);border:1px solid rgba(226,232,240,.82);border-radius:17px;padding:15px;box-shadow:0 18px 50px -42px rgba(15,23,42,.38);min-width:0;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.metric::after,.card::after{content:"";position:absolute;inset:auto -20% -70% 20%;height:130px;background:radial-gradient(circle,rgba(56,189,248,.10),transparent 68%);opacity:0;transition:opacity .25s ease;pointer-events:none}.metric:hover,.card:hover{transform:translateY(-3px);border-color:rgba(56,189,248,.38);box-shadow:0 30px 72px -48px rgba(15,23,42,.48)}.metric:hover::after,.card:hover::after{opacity:1}.metric-label{font-size:12px;color:#64748b}.metric-value{font-size:22px;font-weight:800;margin-top:7px;letter-spacing:-.035em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.metric-sub{font-size:11px;color:#94a3b8;margin-top:4px}
 .charts{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:12px}.card{position:relative;overflow:hidden;background:rgba(255,255,255,.72);border:1px solid rgba(226,232,240,.82);border-radius:18px;padding:15px;box-shadow:0 22px 60px -47px rgba(15,23,42,.4);min-width:0;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.card.wide{grid-column:1/-1}.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.card-title{font-size:14px;font-weight:800;margin:0}.card-note{font-size:11px;color:#94a3b8;margin-top:3px}.chart{height:300px;margin-top:7px}.pie{height:300px}.list{margin-top:10px;display:flex;flex-direction:column;gap:7px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 10px;border-radius:11px;background:rgba(248,250,252,.72);font-size:12px}.row span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row strong{font-weight:800}.notice{padding:11px 13px;border-radius:12px;background:rgba(240,249,255,.88);border:1px solid rgba(125,211,252,.55);color:#075985;font-size:12px;margin-bottom:12px}.error{padding:18px;border-radius:15px;background:rgba(254,242,242,.9);border:1px solid #fecaca;color:#b91c1c;font-size:13px}.empty{height:280px;display:grid;place-items:center;color:#94a3b8;font-size:13px}.loading{height:110px;border-radius:15px;background:linear-gradient(110deg,rgba(226,232,240,.65) 20%,rgba(255,255,255,.9) 42%,rgba(226,232,240,.65) 64%);background-size:220% 100%;animation:load 1.25s infinite}.loading.chart-load{height:320px}@keyframes load{to{background-position:-220% 0}}@keyframes shine{0%,55%{transform:translateX(-70%)}85%,100%{transform:translateX(70%)}}
 .footer{text-align:center;color:#94a3b8;font-size:11px;padding:18px}.theme{position:fixed;right:18px;bottom:18px;border:1px solid var(--line);background:rgba(255,255,255,.78);color:var(--text);border-radius:999px;padding:9px 12px;box-shadow:0 22px 54px -32px rgba(15,23,42,.42);backdrop-filter:blur(16px);z-index:20}
 html.dark{--bg:#090f18;--surface:rgba(15,23,42,.72);--surface-solid:#0f172a;--surface2:rgba(30,41,59,.72);--text:#eef2ff;--muted:#94a3b8;--line:rgba(71,85,105,.58)}html.dark body{background:radial-gradient(900px 520px at 8% -5%,rgba(14,165,233,.13),transparent 62%),radial-gradient(780px 520px at 94% 3%,rgba(99,102,241,.14),transparent 60%),#090f18}html.dark .app-shell,html.dark .nav,html.dark .controls,html.dark .hero,html.dark .metric,html.dark .card{background:rgba(15,23,42,.68);border-color:rgba(71,85,105,.52)}html.dark .btn,html.dark select{background:rgba(15,23,42,.72);color:#e2e8f0;border-color:rgba(71,85,105,.58)}html.dark .btn.primary,.html.dark .tab.active{background:#f8fafc;color:#0f172a}html.dark .tab:hover,html.dark .range:hover{background:rgba(30,41,59,.8);color:#f8fafc}html.dark .range.active{background:rgba(14,165,233,.18);color:#7dd3fc}html.dark .row{background:rgba(30,41,59,.6)}html.dark .notice{background:rgba(8,47,73,.45);border-color:rgba(14,165,233,.35);color:#bae6fd}html.dark .error{background:rgba(69,10,10,.4);border-color:rgba(248,113,113,.35);color:#fca5a5}
@@ -79,7 +80,6 @@ const T={
  kv:{label:"KV 存储",icon:"🧩",desc:"读写操作、Key 与容量"},
  r2:{label:"R2 对象存储",icon:"📦",desc:"对象、请求与存储量"},
  do:{label:"Durable Objects",icon:"🔷",desc:"请求、CPU、内存与持久化"},
- queues:{label:"Queues",icon:"📨",desc:"积压、消费者并发与消息操作"}
 };
 const label=k=>T[k]?.label||k;
 const S={
@@ -112,10 +112,12 @@ function load(){
  $("#content").innerHTML=`<div class="grid metrics">${Array.from({length:6},()=>`<div class="loading"></div>`).join("")}</div>
  <div class="grid charts"><div class="loading chart-load"></div><div class="loading chart-load"></div></div>`;
 }
+const metricIcons=["M9 12h6m-3-3v6","M3 12h18M12 3v18","M5 12h14l-2-2m2 2-2 2","M4 19h16M6 16h12M8 13h8M10 10h4","M12 3v18M3 12h18","M4 7h16v10H4z M8 11h8"];
+const metricColors=["#f97316","#2563eb","#12b76a","#7f56d9","#eab308","#ec4899"];
 function metrics(items){
- return `<div class="grid metrics">${items.map(x=>`<div class="metric">
- <div class="metric-label">${x[0]}</div><div class="metric-value">${x[1]}</div><div class="metric-sub">${x[2]||""}</div>
- </div>`).join("")}</div>`;
+ return `<div class="grid metrics">${items.map((x,i)=>{const c=metricColors[i%metricColors.length],path=metricIcons[i%metricIcons.length];return `<div class="metric">
+  <div class="metric-top"><div><div class="metric-label">${x[0]}</div><div class="metric-value">${x[1]}</div></div><div class="metric-icon" style="--mc:${c};--mb:${c}22"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg></div></div><div class="metric-sub">${x[2]||""}</div>
+ </div>`}).join("")}</div>`;
 }
 function card(title,id,note="",wide=false){
  return `<section class="card ${wide?"wide":""}">
@@ -125,7 +127,7 @@ function card(title,id,note="",wide=false){
 function pieCard(title,id){return card(title,id,"Top N")}
 function chart(id,opt){
  requestAnimationFrame(()=>{
-  const el=document.getElementById(id);if(!el)return;
+  const el=document.getElementById(id);if(!el||!opt)return;
   const c=echarts.init(el);S.charts.push(c);c.setOption(opt,{notMerge:true});
   const ro=new ResizeObserver(()=>c.resize());ro.observe(el);c.__ro=ro;
  });
@@ -209,7 +211,7 @@ async function renderOverview(){
  </div>`;
  chart("overview-pie",pieOpt([
   {name:"Zones",value:c.zones},{name:"Workers",value:c.workers},{name:"D1",value:c.d1},
-  {name:"KV",value:c.kv},{name:"R2",value:c.r2},{name:"DO",value:c.durableObjects},{name:"Queues",value:c.queues}
+  {name:"KV",value:c.kv},{name:"R2",value:c.r2},{name:"DO",value:c.durableObjects}
  ]));
  $("#overview-list").innerHTML=list((d.resources.queues||[]).map(x=>({name:x.name,value:""})));
 }
@@ -277,7 +279,7 @@ function renderProduct(tab,d){
  queues:[
   ["平均积压",fmt(d.backlog)],["积压字节",bytes(d.backlogBytes)],["并发",fmt(d.concurrency)],
   ["操作数",fmt(d.operations)],["操作字节",bytes(d.operationBytes)],["队列数",fmt(d.queues?.length)]
- ],
+ ]
  }[tab]||[];
  let body=metrics(common);
  if(tab==="workers")body+=`<div class="grid charts">${card("请求趋势","p1","按小时",true)}${card("错误趋势","p2","按小时",true)}${pieCard("脚本请求","p3")}${pieCard("状态分布","p4")}${card("内存趋势","p5","P50",true)}</div>`;
@@ -285,7 +287,6 @@ function renderProduct(tab,d){
  if(tab==="kv")body+=`<div class="grid charts">${card("操作趋势","p1","按天",true)}${card("存储趋势","p2","Byte Count",true)}${card("Key 趋势","p3","Key Count",true)}${pieCard("操作类型","p4")}${pieCard("Namespace","p5")}</div>`;
  if(tab==="r2")body+=`<div class="grid charts">${card("请求趋势","p1","按小时",true)}${card("存储趋势","p2","Payload Size",true)}${card("对象趋势","p3","Object Count",true)}${pieCard("操作类型","p4")}${pieCard("状态码","p5")}${pieCard("Bucket","p6")}</div>`;
  if(tab==="do")body+=`<div class="grid charts">${card("请求趋势","p1","按天",true)}${card("内存趋势","p2","P50",true)}${card("CPU 趋势","p3","CPU Time",true)}${card("存储趋势","p4","Stored Bytes",true)}${card("说明","p5","Durable Objects 按命名空间聚合")}</div>`;
- if(tab==="queues")body+=`<div class="grid charts">${card("积压趋势","p1","Messages",true)}${card("消费者并发","p2","Concurrency",true)}${card("消息操作","p3","按分钟",true)}${pieCard("操作类型","p4")}${card("队列资源","p5","当前账户队列")}</div>`;
 
  $("#content").innerHTML=`<section class="hero"><div class="hero-title">${tab.toUpperCase()}</div><div class="hero-main"><div><h2>${T[tab].icon} ${T[tab].label}</h2><div class="hero-desc">${T[tab].desc}</div></div><div class="hero-note">${S.days} 天 · 按需加载</div></div></section>${notices(d.warnings)}${body}`;
  if(tab==="workers"){
@@ -303,10 +304,6 @@ function renderProduct(tab,d){
  if(tab==="do"){
   chart("p1",lineOpt(d.trend,"Requests"));chart("p2",lineOpt(d.memoryTrend,"Memory P50"));chart("p3",lineOpt(d.cpuTrend,"CPU"));chart("p4",lineOpt(d.storageTrend,"Storage"));
   const de=document.getElementById("p5");if(de)de.innerHTML=`<div class="empty small-empty">Cloudflare 当前接口按账户 / 命名空间提供 Durable Objects Analytics，本页不再猜测 namespaceName 字段。</div>`;
- }
- if(tab==="queues"){
-  chart("p1",lineOpt(d.backlogTrend,"Messages"));chart("p2",lineOpt(d.concurrencyTrend,"Concurrency"));chart("p3",lineOpt(d.operationsTrend,"Operations"));chart("p4",pieOpt(d.actions));
-  const qe=document.getElementById("p5");if(qe)qe.innerHTML=list((d.queues||[]).map(x=>({name:x.name,value:""})));
  }
 
 }
